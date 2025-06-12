@@ -8,5 +8,8 @@
 # include <arpa/inet.h>
 # include <unistd.h>
 # include <vector>
+# include <sys/poll.h>
+# include <netinet/tcp.h>
+
 
 #endif
