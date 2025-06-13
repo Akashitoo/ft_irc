@@ -10,6 +10,7 @@
 # include <vector>
 # include <sys/poll.h>
 # include <netinet/tcp.h>
+# include <fcntl.h> 
 
 
 #endif
