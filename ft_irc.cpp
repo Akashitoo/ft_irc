@@ -54,7 +54,8 @@ void read_client(std::vector<struct pollfd>& clt)
 				if (bytes_receive)
 				{
 					receipt[bytes_receive] = '\0';
-					std::cout << receipt << '\n';
+					std::string recu = receipt;
+					std::cout << receipt << recu.size() << "-----"<<'\n';
 				}
 				else
 					clt.erase(clt.begin() + i);
