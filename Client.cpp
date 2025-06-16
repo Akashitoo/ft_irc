@@ -3,13 +3,15 @@
 // a revoir 
 
 
-// Client::Client() {}
+Client::Client(int fd) : _fd(fd) {}
 
-// Client::~Client() {}
-
-// Client::~Client() {}
+Client::~Client() {}
 
 
+
+int Client::getFd() const {
+    return _fd;
+}
 // bool Client::getPass() const
 // {
     

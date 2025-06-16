@@ -9,23 +9,24 @@
 class Client {
     private :
 
-    bool _pass;
+    // bool _pass;
     int _fd;
-    std::string _nick;
-    std::string  _user;
-    bool _register; //nick et pass
+    // std::string _nick;
+    // std::string  _user;
+    // bool _register; //nick et pass
 
     public :
 
-    Client();
+    Client(int _fd);
     ~Client();
 
-    bool getPass();
+    int getFd() const;
+    // bool getPass();
     // void setPass()
-    std::string getUser() const;
-    std::string getNick() const;
-    void setUser(const std::string& user);
-    void setNick(const std::string& nick);
+    // std::string getUser() const;
+    // std::string getNick() const;
+    // void setUser(const std::string& user);
+    // void setNick(const std::string& nick);
     
 };
 #endif

@@ -16,12 +16,15 @@ struct pollfd create_pollfd(int sock)
 	return (nfd);
 }
 
-void add_client(std::vector<struct pollfd>& clt)
+void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients )
 {
 	int sock = clt[0].fd;
 	sockaddr_in client;
 	socklen_t client_size = sizeof(client);
 	int clientfd = accept(sock, (struct sockaddr *)&client, &client_size);
+	Client new_client(clientfd);
+    clients.push_back(new_client);
+	//la j implemente le client
 	char receipt[4096];
 	int bytes_receive = recv(clientfd, receipt, sizeof(receipt) -1 , 0);
 	std::string test = "Bienvenue sur le serveur !\n";
@@ -44,7 +47,7 @@ void add_client(std::vector<struct pollfd>& clt)
 	clt.push_back(create_pollfd(clientfd));
 }
 
-void read_client(std::vector<struct pollfd>& clt)
+void read_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients)
 {
 	
 	for(size_t i=0; i < clt.size(); i++)
@@ -53,7 +56,7 @@ void read_client(std::vector<struct pollfd>& clt)
 		{
 
 			if (i == 0)
-				add_client(clt);
+				add_client(clt, clients);
 			else
 			{
 				char receipt[4096];
@@ -98,13 +101,15 @@ int main(int argc, char **argv)
 		
 		// Liste de tous les sockets 
 		std::vector<struct pollfd> fds;
+		std::vector<Client> clients;
+
 		fds.push_back(create_pollfd(sock));
 		//	Boucle infini du serveur qui surveille les connexions et les nouveaux msg 
 		while (!g_stop)
 		{
 			int ret = poll(&fds[0], fds.size(), 100);
 			if (ret > 0)
-			read_client(fds);
+			read_client(fds, clients);
 		}
 		
 		// Fermeture de tous les sockets;

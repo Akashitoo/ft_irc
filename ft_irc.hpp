@@ -11,6 +11,7 @@
 # include <sys/poll.h>
 # include <netinet/tcp.h>
 #include <csignal>
+#include "Client.hpp"
 
 class Server{
 int   ft_signal(int signum); 

@@ -4,7 +4,7 @@ CC = c++
 
 CFLAGS = -Wall -Wextra -Werror -std=c++98 -g
 
-SRC =	ft_irc.cpp \
+SRC =	ft_irc.cpp Client.cpp
 
 OBJS = $(SRC:.cpp=.o)
 
