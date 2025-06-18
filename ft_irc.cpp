@@ -17,6 +17,40 @@ struct pollfd create_pollfd(int sock)
 	return (nfd);
 }
 
+//Gerer les commandes, je geres le pass nick user et je fais la suite jeudi
+void handleCommand(Client &client, const std::string &line, const std::string &server_password)
+{
+	std::istringstream iss(line);
+	std::string command;
+	iss >> command;
+
+	if (command == "PASS")
+	{
+		std::string pass;
+		iss >> pass;
+		if (pass.size() > 0)
+			client.setPassword(pass);
+	}
+	else if (command == "NICK")
+	{
+		std::string nick;
+		iss >> nick;
+		if (nick.size() > 0)
+			client.setNick(nick);
+	}
+	else if (command == "USER")
+	{
+		std::string user;
+		iss >> user;
+		if (user.size() > 0)
+			client.setUser(user);
+
+			//CODE PAS FINI
+			// ensuite tu fais un if et tu commences a gerer la verification du client par ordre
+			// mdp bon, user nick dans le client et bien recu dans le server
+	}
+}
+
 void add_client(std::vector<struct pollfd>& clt)
 {
 	int sock = clt[0].fd;
@@ -32,7 +66,7 @@ void add_client(std::vector<struct pollfd>& clt)
 		receipt[bytes_receive] = '\0';
 		std::string recu = receipt;
 		std::cout << receipt;
-
+		//Demain je dois changer cette condition vu que je geres les commandes
 		std::string servername = "ircserv";
 		std::string nick = "abalasub";
 
@@ -44,6 +78,7 @@ void add_client(std::vector<struct pollfd>& clt)
 	}
 	clt.push_back(create_pollfd(clientfd));
 }
+
 
 void read_client(std::vector<struct pollfd>& clt)
 {
