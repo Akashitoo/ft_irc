@@ -8,6 +8,7 @@ void ft_signal(int signum)
     std::cout << "\nSignal reçu, arret du serv" << std::endl;
     g_stop = 1;
 }
+
 struct pollfd create_pollfd(int sock)
 {
 	struct	pollfd nfd;
@@ -97,8 +98,20 @@ void read_client(std::vector<struct pollfd>& clt)
 				
 				if (bytes_receive)
 				{
+
 					receipt[bytes_receive] = '\0';
 					std::cout << receipt <<'\n';
+
+					std::string recu = receipt;
+					
+					if (recu.find("NICK") != std::string::npos)
+					{
+						std::string change_nickname;
+						size_t pos = recu.find(" ") + 1;
+						change_nickname = ":abalasub!unknown@localhost NICK :" + recu.substr(pos, recu.size() - pos) + "\r\n";
+						std::cout << change_nickname << '\n';
+						send(clt[i].fd, change_nickname.c_str(), change_nickname.size(), 0);
+					}
 				}
 				else
 					clt.erase(clt.begin() + i);
@@ -106,8 +119,6 @@ void read_client(std::vector<struct pollfd>& clt)
 		}
 	}
 }
-
-
 
 int main(int argc, char **argv)
 {
@@ -119,6 +130,8 @@ int main(int argc, char **argv)
 		signal(SIGQUIT, ft_signal);
 		//	Initialisation du socket serveur;
 		int sock = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP);
+		int opt = 1;
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 		if (sock == -1)
 			std::cerr << "Error : Socket failed to create\n";
 		
