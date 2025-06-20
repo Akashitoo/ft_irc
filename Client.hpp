@@ -9,31 +9,35 @@
 class Client {
     private :
 
-    // bool _pass;
     int _fd;
     std::string _pass;
-    std::string _nick;
-    std::string  _user;
-    std::string _join;
-    // bool _register; //nick et pass
+	std::string _nick;
+	std::string _user;
+	// std::string _hostname;
+	std::string _buffer;
+    bool _verif;
 
     public :
 
     Client(int fd);
-    Client(std::string pass, std::string nick, std::string user);
-    ~Client();
+	~Client();
 
-    int getFd() const;
-    // bool getPass();
-    // void setPass()
+	
+	std::string& getBuffer();
+	void appendToBuffer(const std::string& data);
+    
+    //getter
     std::string getPass() const;
     std::string getNick() const;
     std::string getUser() const;
-    std::string getJoin() const;
+	int getFd() const;
+    bool getVerif() const;
+    //setter
     void setPass(const std::string& pass);
-    void setNick(const std::string& nick);
     void setUser(const std::string& user);
-    void setJoin(const std::string& join);
+    void setNick(const std::string& nick);
+    // void setJoin(const std::string& join);
+    void setVerif(bool value);
 
     
 };

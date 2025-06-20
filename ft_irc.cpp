@@ -17,7 +17,43 @@ struct pollfd create_pollfd(int sock)
 	return (nfd);
 }
 
-void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients )
+// Gerer les commandes, je geres le pass nick user et je fais la suite jeudi
+void handleCommand(Client &client, const std::string &line, const std::string &server_password)
+{
+	std::istringstream iss(line);
+	std::string command;
+	iss >> command;
+
+	if (command == "PASS")
+	{
+		std::string pass;
+		iss >> pass;
+		if (pass.size() > 0)
+			client.setPass(pass);
+		if (pass == server_password)
+                client.setVerif(true);
+	}
+	else if (command == "NICK")
+	{
+		std::string nick;
+		iss >> nick;
+		if (nick.size() > 0)
+			client.setNick(nick);
+	}
+	else if (command == "USER")
+	{
+		std::string user;
+		iss >> user;
+		if (user.size() > 0)
+			client.setUser(user);
+		
+			//CODE PAS FINI
+			// ensuite tu fais un if et tu commences a gerer la verification du client par ordre
+			// mdp bon, user nick dans le client et bien recu dans le server
+	}
+}
+
+void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients)
 {
 	int sock = clt[0].fd;
 	sockaddr_in client;
@@ -35,7 +71,7 @@ void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients )
 		receipt[bytes_receive] = '\0';
 		std::string recu = receipt;
 		std::cout << receipt;
-
+		//Demain je dois changer cette condition vu que je geres les commandes
 		std::string servername = "ircserv";
 		std::string nick = "abalasub";
 
@@ -48,7 +84,7 @@ void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients )
 	clt.push_back(create_pollfd(clientfd));
 }
 
-void read_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients)
+void read_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients, const std::string &password)
 {
 	
 	for(size_t i=0; i < clt.size(); i++)
@@ -66,7 +102,24 @@ void read_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients)
 				if (bytes_receive)
 				{
 					receipt[bytes_receive] = '\0';
+					std::string recu = receipt;
 					std::cout << receipt <<'\n';
+					for(size_t j = 0; j < clients.size(); ++j)
+					{
+						if(clients[j].getFd() == clt[i].fd)
+						{
+							std::istringstream iss(recu);
+							std::string line;
+							while(std::getline(iss, line))
+							{
+								if(!line.empty() && line[line.length() - 1] == '\r')
+    								line = line.substr(0, line.length() - 1);
+
+								handleCommand(clients[j], line, password);
+							}
+							break;
+						}
+					}
 				}
 				else
 					clt.erase(clt.begin() + i);
@@ -118,7 +171,7 @@ int main(int argc, char **argv)
 		{
 			int ret = poll(&fds[0], fds.size(), 100);
 			if (ret > 0)
-			read_client(fds, clients);
+			read_client(fds, clients, argv[2]);
 		}
 		
 		// Fermeture de tous les sockets;

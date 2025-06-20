@@ -14,6 +14,7 @@
 #include "Client.hpp"
 # include <csignal>
 # include <stdexcept>
+#include <sstream>
 
 //class Server{
 //int   ft_signal(int signum); 
