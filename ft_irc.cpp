@@ -13,6 +13,7 @@ struct pollfd create_pollfd(int sock)
 	struct	pollfd nfd;
 	nfd.fd = sock;
 	nfd.events = POLLIN;
+	nfd.revents = 0;
 	return (nfd);
 }
 
@@ -22,9 +23,9 @@ void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients )
 	sockaddr_in client;
 	socklen_t client_size = sizeof(client);
 	int clientfd = accept(sock, (struct sockaddr *)&client, &client_size);
+	//la j implemente le client je co au serv
 	Client new_client(clientfd);
     clients.push_back(new_client);
-	//la j implemente le client
 	char receipt[4096];
 	int bytes_receive = recv(clientfd, receipt, sizeof(receipt) -1 , 0);
 	std::string test = "Bienvenue sur le serveur !\n";
@@ -32,9 +33,10 @@ void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients )
 	if (bytes_receive > 0)
 	{
 		receipt[bytes_receive] = '\0';
-		std::cout << receipt << '\n';
+		std::string recu = receipt;
+		std::cout << receipt;
 
-		std::string servername = "monserveur";
+		std::string servername = "ircserv";
 		std::string nick = "abalasub";
 
 		std::string cap_ls = ":" + servername + " CAP * LS :\r\n";
@@ -43,7 +45,6 @@ void add_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients )
 		std::string welcome = ":" + servername + " 001 " + nick + " :Bienvenue sur le serveur IRC\r\n";
 		send(clientfd, welcome.c_str(), welcome.size(), 0);
 	}
-	std::cout << "connexion etabli !! \n";
 	clt.push_back(create_pollfd(clientfd));
 }
 
@@ -65,7 +66,7 @@ void read_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients)
 				if (bytes_receive)
 				{
 					receipt[bytes_receive] = '\0';
-					std::cout << receipt << '\n';
+					std::cout << receipt <<'\n';
 				}
 				else
 					clt.erase(clt.begin() + i);
@@ -78,15 +79,16 @@ void read_client(std::vector<struct pollfd>& clt, std::vector<Client>& clients)
 
 int main(int argc, char **argv)
 {
-	if(argc == 3)
+	try
 	{
-
+		if(argc != 3)
+			throw BadArguments();
 		signal(SIGINT, ft_signal);
 		signal(SIGQUIT, ft_signal);
 		//	Initialisation du socket serveur;
 		int sock = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP);
 		if (sock == -1)
-		std::cerr << "Error : Socket failed to create\n";
+			std::cerr << "Error : Socket failed to create\n";
 		
 		sockaddr_in ipport;
 		
@@ -95,10 +97,17 @@ int main(int argc, char **argv)
 		ipport.sin_addr.s_addr = inet_addr("127.0.0.1");
 		
 		if (bind(sock, (struct sockaddr *)&ipport, sizeof(ipport)) == -1)
-		std::cerr << "Error : Failed to bind socket\n";	
+		{
+			close(sock);
+			throw BindFailed();
+		}
+			
 		if (listen(sock, 10) == -1)
-		std::cerr << "Error : Failed to listen socket\n";
-		
+		{
+			close(sock);
+			throw ListenFailed();
+		}
+			
 		// Liste de tous les sockets 
 		std::vector<struct pollfd> fds;
 		std::vector<Client> clients;
@@ -114,7 +123,11 @@ int main(int argc, char **argv)
 		
 		// Fermeture de tous les sockets;
 		for (size_t i=0; i < fds.size(); i++)
-		close(fds[i].fd);
-		(void) argv;
+			close(fds[i].fd);
 	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error :" << e.what() << '\n';
+	}
+	(void) argv;
 }

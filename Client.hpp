@@ -11,22 +11,30 @@ class Client {
 
     // bool _pass;
     int _fd;
-    // std::string _nick;
-    // std::string  _user;
+    std::string _pass;
+    std::string _nick;
+    std::string  _user;
+    std::string _join;
     // bool _register; //nick et pass
 
     public :
 
-    Client(int _fd);
+    Client(int fd);
+    Client(std::string pass, std::string nick, std::string user);
     ~Client();
 
     int getFd() const;
     // bool getPass();
     // void setPass()
-    // std::string getUser() const;
-    // std::string getNick() const;
-    // void setUser(const std::string& user);
-    // void setNick(const std::string& nick);
+    std::string getPass() const;
+    std::string getNick() const;
+    std::string getUser() const;
+    std::string getJoin() const;
+    void setPass(const std::string& pass);
+    void setNick(const std::string& nick);
+    void setUser(const std::string& user);
+    void setJoin(const std::string& join);
+
     
 };
 #endif
