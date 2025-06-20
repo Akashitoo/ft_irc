@@ -11,11 +11,12 @@
 # include <sys/poll.h>
 # include <netinet/tcp.h>
 # include <csignal>
+# include "Client.hpp"
+# include "Server.hpp"
+# include <csignal>
 # include <stdexcept>
+#include <sstream>
 
-//class Server{
-//int   ft_signal(int signum); 
-//};
 
 class BindFailed : public std::exception {
 

@@ -1,15 +1,16 @@
 #include "Client.hpp"
 
 //mettre un args dans le construc parceque besoin pour le server 
-Client::Client(int fd) : _fd(fd), _nick(""), _user(""), _pass(""),
+Client::Client(int fd) : _fd(fd), _pass(""), _nick(""), _user(""),
 _buffer(""), _verif(false) {
 }
 
 Client::~Client() {
-	close(_fd);
+	//normalement on close les fd
 }
 
-void Client::setUser(const std::string &user) 
+//setter
+void Client::setUser(const std::string &user)
 {
       _user = user;
 }
@@ -20,12 +21,15 @@ void Client::setNick(const std::string& nick) {
 
 void Client::setPass(const std::string &pass)
 {
-	_password = pass;
+	_pass = pass;
 }
-
+void Client::setVerif(bool value) {
+    _verif = value;
+}
+//getter
 std::string Client::getPass() const
 {
-	return _password;
+	return _pass;
 }
 
 std::string Client::getUser() const{ 
@@ -44,9 +48,6 @@ std::string& Client::getBuffer() {
 	return _buffer;
 }
 
-void Client::setVerif(bool value) {
-    _verif = value;
-}
 
 bool Client::getVerif() const {
     return _verif;
