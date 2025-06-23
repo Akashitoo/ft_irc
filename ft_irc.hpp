@@ -15,7 +15,8 @@
 # include "Server.hpp"
 # include <csignal>
 # include <stdexcept>
-#include <sstream>
+# include <sstream>
+# include <cstdlib>
 
 
 class BindFailed : public std::exception {

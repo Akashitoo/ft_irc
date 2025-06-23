@@ -1,8 +1,7 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
-#include <iostream>
-// #include "Server.hpp"
+# include "Server.hpp"
 
 //A REVOIR
 
@@ -16,6 +15,7 @@ class Client {
 	// std::string _hostname;
 	std::string _buffer;
     bool _verif;
+	bool _disconnected;
 
     public :
 
@@ -32,12 +32,14 @@ class Client {
     std::string getUser() const;
 	int getFd() const;
     bool getVerif() const;
+    bool getDisconnected() const;
     //setter
     void setPass(const std::string& pass);
     void setUser(const std::string& user);
     void setNick(const std::string& nick);
     // void setJoin(const std::string& join);
     void setVerif(bool value);
+    void setDisconnected(bool value);
 
     
 };
