@@ -136,11 +136,8 @@ Server::Server(std::string password): _password(password){}
 
 Server::~Server(){}
 
-void Server::start()
+void Server::init()
 {
-	signal(SIGINT, ft_signal);
-	signal(SIGQUIT, ft_signal);
-	//	Initialisation du socket serveur;
 	int sock = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP);
 	int opt = 1;
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -166,7 +163,14 @@ void Server::start()
 	}
 
 	this->_fds.push_back(create_pollfd(sock));
-	//	Boucle infini du serveur qui surveille les connexions et les nouveaux msg 
+}
+
+void Server::start()
+{
+	this->init();
+	signal(SIGINT, ft_signal);
+	signal(SIGQUIT, ft_signal);
+
 	while (!g_stop)
 	{
 		int ret = poll(&this->_fds[0], this->_fds.size(), 100);
@@ -178,3 +182,46 @@ void Server::start()
 	for (size_t i=0; i < this->_fds.size(); i++)
 		close(this->_fds[i].fd);
 }
+
+//void Server::start()
+//{
+//	signal(SIGINT, ft_signal);
+//	signal(SIGQUIT, ft_signal);
+//	//	Initialisation du socket serveur;
+//	int sock = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP);
+//	int opt = 1;
+//	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+//	if (sock == -1)
+//		std::cerr << "Error : Socket failed to create\n";
+	
+//	sockaddr_in ipport;
+	
+//	ipport.sin_family = AF_INET;
+//	ipport.sin_port = htons(6667);
+//	ipport.sin_addr.s_addr = inet_addr("127.0.0.1");
+	
+//	if (bind(sock, (struct sockaddr *)&ipport, sizeof(ipport)) == -1)
+//	{
+//		close(sock);
+//		throw BindFailed();
+//	}
+		
+//	if (listen(sock, 10) == -1)
+//	{
+//		close(sock);
+//		throw ListenFailed();
+//	}
+
+//	this->_fds.push_back(create_pollfd(sock));
+//	//	Boucle infini du serveur qui surveille les connexions et les nouveaux msg 
+//	while (!g_stop)
+//	{
+//		int ret = poll(&this->_fds[0], this->_fds.size(), 100);
+//		if (ret > 0)
+//		read_client();
+//	}
+	
+//	// Fermeture de tous les sockets;
+//	for (size_t i=0; i < this->_fds.size(); i++)
+//		close(this->_fds[i].fd);
+//}

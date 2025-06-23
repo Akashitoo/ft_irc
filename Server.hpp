@@ -9,9 +9,14 @@ class Server
 
 	private :
 
-	std::vector<struct pollfd> _fds;
-	std::vector<Client> _clients;
-	const std::string _password;
+		std::vector<struct pollfd> _fds;
+		std::vector<Client> _clients;
+		const std::string _password;
+
+		void add_client();
+		void read_client();
+		void handleCommand(Client &client, const std::string &line);
+		void init();
 
 	public : 
 
@@ -21,9 +26,6 @@ class Server
 		~Server();
 
 		void start();
-		void add_client();
-		void read_client();
-		void handleCommand(Client &client, const std::string &line);
 };
 
 #endif
