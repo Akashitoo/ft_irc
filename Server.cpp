@@ -19,6 +19,29 @@ struct pollfd create_pollfd(int sock)
 }
 
 // Gerer les commandes, je geres le pass nick user et je fais la suite jeudi
+
+void Server::handlePass(Client &client, std::istringstream &iss)
+{
+	std::string pass;
+	iss >> pass;
+
+	if (pass.empty())
+		return;
+
+	client.setPass(pass);
+
+	if (pass == this->_password)
+		client.setVerif(true);
+	else
+	{
+		std::string error = "ERROR - Password incorrect\r\n";
+		send(client.getFd(), error.c_str(), error.size(), 0);
+		close(client.getFd());
+		client.setVerif(false);
+	}
+}
+
+
 void Server::handleCommand(Client &client, const std::string &line)
 {
 	std::istringstream iss(line);
@@ -26,15 +49,11 @@ void Server::handleCommand(Client &client, const std::string &line)
 	iss >> command;
 
 	if (command == "PASS")
-	{
-		std::string pass;
-		iss >> pass;
-		if (pass.size() > 0)
-			client.setPass(pass);
+		handlePass(client, iss);
 		//if (pass == server_password)
       //   client.setVerif(true);
 	}
-	else if (command == "NICK")
+	/*else if (command == "NICK")
 	{
 		std::string nick;
 		iss >> nick;
@@ -51,8 +70,8 @@ void Server::handleCommand(Client &client, const std::string &line)
 			//CODE PAS FINI
 			// ensuite tu fais un if et tu commences a gerer la verification du client par ordre
 			// mdp bon, user nick dans le client et bien recu dans le server
-	}
-}
+	}*/
+
 
 void Server::add_client()
 {
@@ -60,19 +79,20 @@ void Server::add_client()
 	sockaddr_in client;
 	socklen_t client_size = sizeof(client);
 	int clientfd = accept(sock, (struct sockaddr *)&client, &client_size);
-	//la j implemente le client je co au serv
+	if (clientfd < 0)
+		return;
 	Client new_client(clientfd);
-    this->_clients.push_back(new_client); 
-	char receipt[4096];
+	this->_clients.push_back(new_client);
+	this->_fds.push_back(create_pollfd(clientfd));
+	/*char receipt[4096];
 	int bytes_receive = recv(clientfd, receipt, sizeof(receipt) -1 , 0);
-	std::string test = "Bienvenue sur le serveur !\n";
-	send(clientfd, test.c_str(), test.size(), 0);
+
 	if (bytes_receive > 0)
 	{
 		receipt[bytes_receive] = '\0';
 		std::string recu = receipt;
 		std::cout << receipt;
-		//Demain je dois changer cette condition vu que je geres les commandes
+
 		std::string servername = "ircserv";
 		std::string nick = "abalasub";
 
@@ -81,43 +101,70 @@ void Server::add_client()
 
 		std::string welcome = ":" + servername + " 001 " + nick + " :Bienvenue sur le serveur IRC\r\n";
 		send(clientfd, welcome.c_str(), welcome.size(), 0);
-	}
-	this->_fds.push_back(create_pollfd(clientfd));
+	}*/
 }
+
+void Server::handleClientInput(Client &client, const std::string &input, size_t fd_index)
+{
+	std::istringstream iss(input);
+	std::string line;
+
+	while (std::getline(iss, line))
+	{
+		if (!line.empty() && line[line.length() - 1] == '\r')
+			line = line.substr(0, line.length() - 1);
+
+		handleCommand(client, line);
+
+		if (!client.getVerif() && client.getPass() != this->_password)
+		{
+			// send error ici si handlePass pas gere
+			std::string error = "ERROR :Mot de passe incorrect\r\n";
+			send(client.getFd(), error.c_str(), error.size(), 0);
+			close(client.getFd());
+			// enlever _fds
+			this->_fds.erase(this->_fds.begin() + fd_index);
+			//supp cllient
+			for (size_t k = 0; k < this->_clients.size(); ++k)
+			{
+				if (this->_clients[k].getFd() == client.getFd())
+				{
+					this->_clients.erase(this->_clients.begin() + k);
+					break;
+				}
+			}
+		}
+	}
+}
+
+
 
 void Server::read_client()
 {
-	
-	for(size_t i=0; i < this->_fds.size(); i++)
+	for (size_t i = 0; i < this->_fds.size(); i++)
 	{
 		if (this->_fds[i].revents & POLLIN)
 		{
-
 			if (i == 0)
+			{
 				add_client();
+			}
 			else
 			{
 				char receipt[4096];
-				int bytes_receive = recv(this->_fds[i].fd, receipt, sizeof(receipt) -1 , 0);
-				
-				if (bytes_receive)
+				int bytes_receive = recv(this->_fds[i].fd, receipt, sizeof(receipt) - 1, 0);
+
+				if (bytes_receive > 0)
 				{
 					receipt[bytes_receive] = '\0';
 					std::string recu = receipt;
 					std::cout << receipt;
-					for(size_t j = 0; j < this->_clients.size(); ++j)
-					{
-						if(this->_clients[j].getFd() == this->_fds[i].fd)
-						{
-							std::istringstream iss(recu);
-							std::string line;
-							while(std::getline(iss, line))
-							{
-								if(!line.empty() && line[line.length() - 1] == '\r')
-    								line = line.substr(0, line.length() - 1);
 
-								handleCommand(this->_clients[j], line);
-							}
+					for (size_t j = 0; j < this->_clients.size(); ++j)
+					{
+						if (this->_clients[j].getFd() == this->_fds[i].fd)
+						{
+							handleClientInput(this->_clients[j], recu, i);
 							break;
 						}
 					}
@@ -126,11 +173,13 @@ void Server::read_client()
 				{
 					close(this->_fds[i].fd);
 					this->_fds.erase(this->_fds.begin() + i);
+					--i;
 				}
 			}
 		}
 	}
 }
+
 
 Server::Server(std::string password): _password(password){}
 
