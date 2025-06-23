@@ -16,6 +16,8 @@
 # include <csignal>
 # include <stdexcept>
 #include <sstream>
+#include <cerrno>
+#include <cstring>
 
 
 class BindFailed : public std::exception {

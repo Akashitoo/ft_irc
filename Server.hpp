@@ -12,6 +12,12 @@ class Server
 	std::vector<struct pollfd> _fds;
 	std::vector<Client> _clients;
 	const std::string _password;
+	void handleClientInput(Client &client, const std::string &input, size_t fd_index);
+	void handleCommand(Client &client, const std::string &line);
+	void handlePass(Client &client, std::istringstream &iss);
+	void handleNick(Client &client, std::istringstream &iss);
+	void handleUser(Client &client, std::istringstream &iss);
+	void checkRegistration(Client &client);
 
 	public : 
 
@@ -23,7 +29,7 @@ class Server
 		void start();
 		void add_client();
 		void read_client();
-		void handleCommand(Client &client, const std::string &line);
+
 };
 
 #endif
