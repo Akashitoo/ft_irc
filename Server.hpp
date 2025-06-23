@@ -4,6 +4,7 @@
 # include "ft_irc.hpp"
 
 class Client;
+class Channel;
 
 class Server
 {
@@ -12,6 +13,7 @@ class Server
 
 	std::vector<struct pollfd> _fds;
 	std::vector<Client> _clients;
+	std::vector<Channel> _channels;
 	const std::string _password;
 	const	int 			_port;
 
@@ -19,6 +21,7 @@ class Server
 	void handleClientInput(Client &client, const std::string &input, size_t fd_index);
 	void handleCommand(Client &client, const std::string &line);
 	void handlePass(Client &client, std::istringstream &iss);
+	Channel& findChannel(std::string name);
 
 	public : 
 

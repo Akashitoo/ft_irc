@@ -13,6 +13,7 @@
 # include <csignal>
 # include "Client.hpp"
 # include "Server.hpp"
+# include "Channel.hpp"
 # include <csignal>
 # include <stdexcept>
 # include <sstream>

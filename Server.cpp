@@ -41,6 +41,20 @@ void Server::handlePass(Client &client, std::istringstream &iss)
 	}
 }
 
+Channel& Server::findChannel(std::string name)
+{
+	std::vector<Channel>::iterator it;
+
+	for (it = this->_channels.begin(); it != this->_channels.end(); it++)
+	{
+		if (it->getName() == name)
+			return *it;
+	}
+
+	Channel newchan(name);
+	this->_channels.push_back(newchan);
+	return this->_channels.back();
+}
 
 void Server::handleCommand(Client &client, const std::string &line)
 {
@@ -52,6 +66,23 @@ void Server::handleCommand(Client &client, const std::string &line)
 		handlePass(client, iss);
 		//if (pass == server_password)
       //   client.setVerif(true);
+	
+	else if (command == "JOIN")
+	{
+		std::string channel = line.substr(line.find("#") + 1);
+		Channel& chan = this->findChannel(channel);
+		chan.addUser(client);
+		chan.sendToUsersNewUser(client);
+		//chan.sendToUsers("un utilisateur a rejoint le channel", client);
+	}
+	else if (command == "PRIVMSG")
+	{
+		if( line[line.find(" ") + 1] == '#')
+		{
+			std::string channel = line.substr(line.find("#") + 1, 6);
+			Channel& chan = this->findChannel(channel);
+			chan.sendToUsersMessage("jai rien parse mais en gros il a envoye un truc", client);
+		}
 	}
 	/*else if (command == "NICK")
 	{
@@ -71,7 +102,7 @@ void Server::handleCommand(Client &client, const std::string &line)
 			// ensuite tu fais un if et tu commences a gerer la verification du client par ordre
 			// mdp bon, user nick dans le client et bien recu dans le server
 	}*/
-
+}
 
 void Server::add_client()
 {
@@ -158,7 +189,7 @@ void Server::read_client()
 				{
 					receipt[bytes_receive] = '\0';
 					std::string recu = receipt;
-					std::cout << "msg recu: " << receipt;
+					std::cout << receipt;
 
 					for (size_t j = 0; j < this->_clients.size(); ++j)
 					{
