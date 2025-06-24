@@ -15,6 +15,7 @@ class Server
 	std::vector<Client> _clients;
 	std::vector<Channel> _channels;
 	const std::string _password;
+	
 	const	int 			_port;
 	void handleClientInput(Client &client, const std::string &input, size_t fd_index);
 	void handleCommand(Client &client, const std::string &line);

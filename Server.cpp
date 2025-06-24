@@ -142,6 +142,7 @@ void Server::checkRegistration(Client &client)
         send(client.getFd(), myinfo.c_str(), myinfo.size(), 0);
     }
 }
+
 Channel& Server::findChannel(std::string name)
 {
 	std::vector<Channel>::iterator it;
@@ -182,12 +183,25 @@ void Server::handleCommand(Client &client, const std::string &line)
 	}
 	else if (command == "PRIVMSG")
 	{
-		if( line[line.find(" ") + 1] == '#')
+		std::size_t dest = line.find(" ");
+
+		if( line[ dest + 1] == '#')
 		{
-			std::string channel = line.substr(line.find("#") + 1, 6);
+			std::string channel = line.substr(dest + 2, line.find(" ", dest + 1) - (dest + 2));
 			Channel& chan = this->findChannel(channel);
-			chan.sendToUsersMessage("jai rien parse mais en gros il a envoye un truc", client);
+			std::string msg = line.substr(line.find(" ", dest + 1) + 2);
+			chan.sendToUsersMessage(msg , client);
 		}
+	}
+	
+	else if (command == "PING")
+	{
+    std::string token;
+    iss >> token;
+    if (token.empty() && line.find(":") != std::string::npos)
+        token = line.substr(line.find(":"));
+    std::string pong = "PONG " + token + "\r\n";
+    send(client.getFd(), pong.c_str(), pong.size(), 0);
 	}
 	/*else if (command == "NICK")
 	{
@@ -293,6 +307,7 @@ void Server::read_client()
 			{
 				add_client();
 			}
+			
 			else
 			{
 				char receipt[4096];
@@ -302,7 +317,7 @@ void Server::read_client()
 				{
 					receipt[bytes_receive] = '\0';
 					std::string recu = receipt;
-					std::cout << "readclient : " << receipt;
+					std::cout << receipt;
 
 					for (size_t j = 0; j < this->_clients.size(); ++j)
 					{
