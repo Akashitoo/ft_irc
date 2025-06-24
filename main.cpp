@@ -7,7 +7,8 @@ int main(int argc, char **argv)
 		if(argc != 3)
 			throw BadArguments();
 		std::string pass = argv[2];
-		Server server(pass);
+		int port = strtol(argv[1], NULL, 10);
+		Server server(pass, port);
 
 		server.start();
 	}

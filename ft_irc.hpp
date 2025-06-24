@@ -13,11 +13,13 @@
 # include <csignal>
 # include "Client.hpp"
 # include "Server.hpp"
+# include "Channel.hpp"
 # include <csignal>
 # include <stdexcept>
 #include <sstream>
 #include <cerrno>
 #include <cstring>
+#include <cstdlib>
 
 
 class BindFailed : public std::exception {

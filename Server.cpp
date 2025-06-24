@@ -142,6 +142,20 @@ void Server::checkRegistration(Client &client)
         send(client.getFd(), myinfo.c_str(), myinfo.size(), 0);
     }
 }
+Channel& Server::findChannel(std::string name)
+{
+	std::vector<Channel>::iterator it;
+
+	for (it = this->_channels.begin(); it != this->_channels.end(); it++)
+	{
+		if (it->getName() == name)
+			return *it;
+	}
+
+	Channel newchan(name);
+	this->_channels.push_back(newchan);
+	return this->_channels.back();
+}
 
 void Server::handleCommand(Client &client, const std::string &line)
 {
@@ -156,6 +170,32 @@ void Server::handleCommand(Client &client, const std::string &line)
 	// }
 	else if (command == "NICK")
         handleNick(client, iss);
+	else if(command == "USER")
+		handleUser(client, iss);
+	else if (command == "JOIN")
+	{
+		std::string channel = line.substr(line.find("#") + 1);
+		Channel& chan = this->findChannel(channel);
+		chan.addUser(client);
+		chan.sendToUsersNewUser(client);
+		//chan.sendToUsers("un utilisateur a rejoint le channel", client);
+	}
+	else if (command == "PRIVMSG")
+	{
+		if( line[line.find(" ") + 1] == '#')
+		{
+			std::string channel = line.substr(line.find("#") + 1, 6);
+			Channel& chan = this->findChannel(channel);
+			chan.sendToUsersMessage("jai rien parse mais en gros il a envoye un truc", client);
+		}
+	}
+	/*else if (command == "NICK")
+	{
+		std::string nick;
+		iss >> nick;
+		if (nick.size() > 0)
+			client.setNick(nick);
+	}
 	else if (command == "USER")
         handleUser(client, iss);
 	// 	std::string nick;
@@ -173,8 +213,8 @@ void Server::handleCommand(Client &client, const std::string &line)
 			//CODE PAS FINI
 			// ensuite tu fais un if et tu commences a gerer la verification du client par ordre
 			// mdp bon, user nick dans le client et bien recu dans le server
-	}
-
+	}*/
+}
 
 void Server::add_client()
 {
@@ -243,7 +283,6 @@ void Server::handleClientInput(Client &client, const std::string &input, size_t 
 }
 
 
-
 void Server::read_client()
 {
 	for (size_t i = 0; i < this->_fds.size(); i++)
@@ -286,15 +325,12 @@ void Server::read_client()
 }
 
 
-Server::Server(std::string password): _password(password){}
+Server::Server(std::string password, int port): _password(password), _port(port){}
 
 Server::~Server(){}
 
-void Server::start()
+void Server::init()
 {
-	signal(SIGINT, ft_signal);
-	signal(SIGQUIT, ft_signal);
-	//	Initialisation du socket serveur;
 	int sock = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP);
 	int opt = 1;
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -304,7 +340,7 @@ void Server::start()
 	sockaddr_in ipport;
 	
 	ipport.sin_family = AF_INET;
-	ipport.sin_port = htons(6667);
+	ipport.sin_port = htons(this->_port);
 	ipport.sin_addr.s_addr = inet_addr("127.0.0.1");
 	
 	if (bind(sock, (struct sockaddr *)&ipport, sizeof(ipport)) == -1)
@@ -320,7 +356,14 @@ void Server::start()
 	}
 
 	this->_fds.push_back(create_pollfd(sock));
-	//	Boucle infini du serveur qui surveille les connexions et les nouveaux msg 
+}
+
+void Server::start()
+{
+	this->init();
+	signal(SIGINT, ft_signal);
+	signal(SIGQUIT, ft_signal);
+
 	while (!g_stop)
 	{
 		int ret = poll(&this->_fds[0], this->_fds.size(), 100);

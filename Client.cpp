@@ -26,6 +26,9 @@ void Client::setPass(const std::string &pass)
 void Client::setVerif(bool value) {
     _verif = value;
 }
+void Client::setDisconnected(bool value) {
+    _disconnected = value;
+}
 //getter
 std::string Client::getPass() const
 {
@@ -51,6 +54,10 @@ std::string& Client::getBuffer() {
 
 bool Client::getVerif() const {
     return _verif;
+}
+
+bool Client::getDisconnected() const {
+    return _disconnected;
 }
 //il ajt chaque information du client dans un buffer
 void Client::appendToBuffer(const std::string& data) {
