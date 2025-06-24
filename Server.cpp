@@ -26,7 +26,11 @@ void Server::handlePass(Client &client, std::istringstream &iss)
 	iss >> pass;
 
 	if (pass.empty())
-		return;
+	{
+		std::string error_msg = ":localhost 430 :No password given\r\n";
+        send(client.getFd(), error_msg.c_str(), error_msg.size(), 0);
+        return;
+	}
 
 	client.setPass(pass);
 
