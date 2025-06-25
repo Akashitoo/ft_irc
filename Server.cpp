@@ -89,8 +89,6 @@ void Server::handleNick(Client &client, std::istringstream &iss)
         nick_msg = ":" + oldNick + " NICK :" + nick + "\r\n";
     send(client.getFd(), nick_msg.c_str(), nick_msg.size(), 0);
     checkRegistration(client);
-
-
 }
 
 void Server::handleUser(Client &client, std::istringstream &iss)
@@ -143,7 +141,7 @@ void Server::checkRegistration(Client &client)
     }
 }
 
-Channel& Server::findChannel(std::string name)
+Channel* Server::findChannel(std::string name)
 {
 	std::vector<Channel>::iterator it;
 
@@ -152,10 +150,7 @@ Channel& Server::findChannel(std::string name)
 		if (it->getName() == name)
 			return *it;
 	}
-
-	Channel newchan(name);
-	this->_channels.push_back(newchan);
-	return this->_channels.back();
+	return (NULL);
 }
 
 void Server::handleCommand(Client &client, const std::string &line)
@@ -179,7 +174,6 @@ void Server::handleCommand(Client &client, const std::string &line)
 		Channel& chan = this->findChannel(channel);
 		chan.addUser(client);
 		chan.sendToUsersNewUser(client);
-		//chan.sendToUsers("un utilisateur a rejoint le channel", client);
 	}
 	else if (command == "PRIVMSG")
 	{
@@ -192,8 +186,22 @@ void Server::handleCommand(Client &client, const std::string &line)
 			std::string msg = line.substr(line.find(" ", dest + 1) + 2);
 			chan.sendToUsersMessage(msg , client);
 		}
+		else
+		{
+			std::string target = line.substr(dest + 1, line.find(" ", dest + 1) - (dest + 1));
+			std::string msg = line.substr(line.find(" ", dest + 1) + 2);
+			size_t len = this->_clients.size();
+			for (size_t i = 0; i < len; i++)
+					if (this->_clients[i].getNick() == target)
+					{
+						std::string cmd = ":" + client.getNick() + "!" + client.getUser() + "@localhost PRIVMSG " + target + " :" + msg + "\r\n";
+						send(_clients[i].getFd(), cmd.c_str(), cmd.size(), 0);
+						return ;
+					}
+						
+		} 
 	}
-	
+
 	else if (command == "PING")
 	{
     std::string token;
@@ -304,10 +312,7 @@ void Server::read_client()
 		if (this->_fds[i].revents & POLLIN)
 		{
 			if (i == 0)
-			{
 				add_client();
-			}
-			
 			else
 			{
 				char receipt[4096];

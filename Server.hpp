@@ -23,7 +23,7 @@ class Server
 	void handleNick(Client &client, std::istringstream &iss);
 	void handleUser(Client &client, std::istringstream &iss);
 	void checkRegistration(Client &client);
-	Channel& findChannel(std::string name);
+	Channel* findChannel(std::string name);
 
 	public : 
 
