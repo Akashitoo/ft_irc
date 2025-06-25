@@ -47,6 +47,12 @@ void Server::handlePass(Client &client, std::istringstream &iss)
 
 void Server::handleNick(Client &client, std::istringstream &iss)
 {
+	 if (!client.getVerif())
+	{
+		std::string error_msg = ":localhost 430 : NO VALID\r\n";
+        send(client.getFd(), error_msg.c_str(), error_msg.size(), 0);
+        return;
+	}
     std::string nick;
     iss >> nick;
     if (nick.empty())
@@ -94,7 +100,12 @@ void Server::handleNick(Client &client, std::istringstream &iss)
 void Server::handleUser(Client &client, std::istringstream &iss)
 {
     std::string username, hostname, servername, realname;
-    
+    if (!client.getVerif())
+	{
+		std::string error_msg = ":localhost 430 : NO VALID\r\n";
+        send(client.getFd(), error_msg.c_str(), error_msg.size(), 0);
+        return;
+	}
     iss >> username;
     if (username.empty())
     {
@@ -148,7 +159,7 @@ Channel* Server::findChannel(std::string name)
 	for (it = this->_channels.begin(); it != this->_channels.end(); it++)
 	{
 		if (it->getName() == name)
-			return *it;
+			return &(*it);
 	}
 	return (NULL);
 }
@@ -171,9 +182,16 @@ void Server::handleCommand(Client &client, const std::string &line)
 	else if (command == "JOIN")
 	{
 		std::string channel = line.substr(line.find("#") + 1);
-		Channel& chan = this->findChannel(channel);
-		chan.addUser(client);
-		chan.sendToUsersNewUser(client);
+		Channel* chan = this->findChannel(channel);
+		if (!chan)
+		{
+			Channel tmp(channel);
+			this->_channels.push_back(tmp);
+			chan = &this->_channels.back();
+			chan->addOperator(client);
+		}
+		chan->addUser(client);
+		chan->sendToUsersNewUser(client);
 	}
 	else if (command == "PRIVMSG")
 	{
@@ -182,9 +200,13 @@ void Server::handleCommand(Client &client, const std::string &line)
 		if( line[ dest + 1] == '#')
 		{
 			std::string channel = line.substr(dest + 2, line.find(" ", dest + 1) - (dest + 2));
-			Channel& chan = this->findChannel(channel);
+			Channel* chan = this->findChannel(channel);
+			if (!chan)
+			{
+
+			}
 			std::string msg = line.substr(line.find(" ", dest + 1) + 2);
-			chan.sendToUsersMessage(msg , client);
+			chan->sendToUsersMessage(msg , client);
 		}
 		else
 		{
@@ -249,25 +271,6 @@ void Server::add_client()
 	Client new_client(clientfd);
 	this->_clients.push_back(new_client);
 	this->_fds.push_back(create_pollfd(clientfd));
-
-	// char receipt[4096];
-	// int bytes_receive = recv(clientfd, receipt, sizeof(receipt) -1 , 0);
-
-	// if (bytes_receive > 0)
-	// {
-	// 	receipt[bytes_receive] = '\0';
-	// 	std::string recu = receipt;
-	// 	std::cout << receipt;
-
-	// 	std::string servername = "ircserv";
-	// 	std::string nick = "abalasub";
-
-	// 	std::string cap_ls = ":" + servername + " CAP * LS :\r\n";
-	// 	send(clientfd, cap_ls.c_str(), cap_ls.size(), 0);
-
-	// 	std::string welcome = ":" + servername + " 001 " + nick + " :Bienvenue sur le serveur IRC\r\n";
-	// 	send(clientfd, welcome.c_str(), welcome.size(), 0);
-	// }
 }
 
 void Server::handleClientInput(Client &client, const std::string &input, size_t fd_index)
@@ -280,27 +283,7 @@ void Server::handleClientInput(Client &client, const std::string &input, size_t 
 	{
 		if (!line.empty() && line[line.length() - 1] == '\r')
 			line = line.substr(0, line.length() - 1);
-
 		handleCommand(client, line);
-
-		// if (!client.getVerif() && client.getPass() != this->_password)
-		// {
-		// 	// send error ici si handlePass pas gere
-		// 	std::string error = "ERROR - (test 1:) Password incorrect\r\n";
-		// 	send(client.getFd(), error.c_str(), error.size(), 0);
-		// 	close(client.getFd());
-		// 	// enlever _fds
-		// 	this->_fds.erase(this->_fds.begin() + fd_index);
-		// 	//supp cllient
-		// 	for (size_t k = 0; k < this->_clients.size(); ++k)
-		// 	{
-		// 		if (this->_clients[k].getFd() == client.getFd())
-		// 		{
-		// 			this->_clients.erase(this->_clients.begin() + k);
-		// 			break;
-		// 		}
-		// 	}
-		// }
 	}
 }
 
@@ -361,7 +344,7 @@ void Server::init()
 	
 	ipport.sin_family = AF_INET;
 	ipport.sin_port = htons(this->_port);
-	ipport.sin_addr.s_addr = inet_addr("127.0.0.1");
+	ipport.sin_addr.s_addr = inet_addr("127.0.0.1");	
 	
 	if (bind(sock, (struct sockaddr *)&ipport, sizeof(ipport)) == -1)
 	{

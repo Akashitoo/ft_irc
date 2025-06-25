@@ -30,14 +30,14 @@ void Client::setDisconnected(bool value) {
     _disconnected = value;
 }
 //getter
-std::string Client::getPass() const
-{
+std::string Client::getPass() const{
 	return _pass;
 }
 
 std::string Client::getUser() const{ 
      return _user; 
 }
+
 std::string Client::getNick() const {
      return _nick;
 }

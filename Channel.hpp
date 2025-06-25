@@ -26,8 +26,7 @@ class Channel
 		void sendToUsersMessage(std::string message, Client& sender);
 		void sendToUsersNewUser(Client& sender);
 
-		std::string getName();
-		
+		std::string getName(); 
 };
 
 #endif
