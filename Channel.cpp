@@ -55,6 +55,21 @@ void Channel::sendToUsersMessage(std::string message, Client* sender)
 	}
 }
 
+void Channel::RemoveUser(Client &client)
+{
+	for(std::vector<Client*>::iterator it = this->_users.begin(); it != _users.end(); it++)
+	{
+
+		if(*it == &client)
+		{
+			this->_users.erase(*it);
+			break;
+			// continue ;
+		}
+	}
+}
+
+
 void Channel::sendToUsersCommand(std::string cmd)
 {
 	std::vector<Client*>::iterator it;

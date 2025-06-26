@@ -207,3 +207,29 @@ void Server::handleKick(Client *client, const std::string &line)
     std::string errorReply = ERR_NOSUCHNICK + client->getNick() + " " + nick + " :No such nick\r\n";
     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
+    send(client.getFd(), pong.c_str(), pong.size(), 0);
+}
+
+void Server::handlePart(Client &client, const std::string &line)
+{
+    // std::string part = line.substr(line.find('#' + 1));
+
+    size_t pos = line.find('#');
+    std::string part;
+    if(pos != std::string::npos)
+    {
+        part = line.substr(pos);
+    }
+    else
+    {
+        std::cout << "test not found" << std::endl;
+    }
+    Channel *chan = this->findChannel(part);
+    if(chan) {
+        chan->RemoveUser(client);
+    }
+    else
+    {
+        std::cout << "TEST" << std::endl;
+    }
+}
