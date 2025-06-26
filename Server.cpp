@@ -22,21 +22,21 @@ Server::Server(std::string password, int port): _password(password), _port(port)
 
 Server::~Server(){}
 
-void Server::checkRegistration(Client &client)
+void Server::checkRegistration(Client *client)
 {
-    if (client.getVerif() && !client.getNick().empty() && !client.getUser().empty())
+    if (client->getVerif() && !client->getNick().empty() && !client->getUser().empty())
     {
-        std::string nick = client.getNick();
-        std::string user = client.getUser();
+        std::string nick = client->getNick();
+        std::string user = client->getUser();
         
         // Envoyer les messages de bienvenue
         // RPL_WELCOME (001)
         std::string welcome = RPL_WELCOME + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@localhost\r\n";
-        send(client.getFd(), welcome.c_str(), welcome.size(), 0);
+        send(client->getFd(), welcome.c_str(), welcome.size(), 0);
         
         // RPL_YOURHOST (002)
         std::string yourhost = RPL_YOURHOST + nick + " :Your host is localhost, running version 1.0\r\n";
-        send(client.getFd(), yourhost.c_str(), yourhost.size(), 0);
+        send(client->getFd(), yourhost.c_str(), yourhost.size(), 0);
         
         // RPL_CREATED (003)
         // std::string created = ":localhost 003 " + nick + " :This server was created June 2025\r\n";
@@ -44,25 +44,25 @@ void Server::checkRegistration(Client &client)
         
         // RPL_MYINFO (004)
         std::string myinfo = RPL_MYINFO + nick + " localhost 1.0 o o\r\n";
-        send(client.getFd(), myinfo.c_str(), myinfo.size(), 0);
+        send(client->getFd(), myinfo.c_str(), myinfo.size(), 0);
     }
 }
 
 Channel* Server::findChannel(std::string name)
 {
-	std::vector<Channel>::iterator it;
+	std::vector<Channel*>::iterator it;
 
 	for (it = this->_channels.begin(); it != this->_channels.end(); it++)
 	{
-		if (it->getName() == name)
-			return &(*it);
+		if ((*it)->getName() == name)
+			return *it;
 	}
 	return (NULL);
 }
 
 
 
-void Server::handleCommand(Client &client, const std::string &line)
+void Server::handleCommand(Client *client, const std::string &line)
 {
 	std::istringstream iss(line);
 	std::string command;
@@ -94,12 +94,14 @@ void Server::add_client()
 	int clientfd = accept(sock, (struct sockaddr *)&client, &client_size);
 	if (clientfd < 0)
 		return;
-	Client new_client(clientfd);
+
+	Client * new_client = new Client(clientfd);
+
 	this->_clients.push_back(new_client);
 	this->_fds.push_back(create_pollfd(clientfd));
 }
 
-void Server::handleClientInput(Client &client, const std::string &input, size_t fd_index)
+void Server::handleClientInput(Client *client, const std::string &input, size_t fd_index)
 {
     (void)fd_index;
 	std::istringstream iss(input);
@@ -134,7 +136,7 @@ void Server::read_client()
 
 					for (size_t j = 0; j < this->_clients.size(); ++j)
 					{
-						if (this->_clients[j].getFd() == this->_fds[i].fd)
+						if (this->_clients[j]->getFd() == this->_fds[i].fd)
 						{
 							handleClientInput(this->_clients[j], recu, i);
 							break;
@@ -197,4 +199,10 @@ void Server::start()
 	// Fermeture de tous les sockets;
 	for (size_t i=0; i < this->_fds.size(); i++)
 		close(this->_fds[i].fd);
+	
+	for (size_t i=0; i < this->_clients.size(); i++)
+		delete this->_clients[i];
+	
+	for (size_t i=0; i < this->_channels.size(); i++)
+		delete this->_channels[i];
 }
