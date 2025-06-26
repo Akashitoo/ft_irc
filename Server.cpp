@@ -60,6 +60,8 @@ Channel* Server::findChannel(std::string name)
 	return (NULL);
 }
 
+
+
 void Server::handleCommand(Client &client, const std::string &line)
 {
 	std::istringstream iss(line);
@@ -78,7 +80,8 @@ void Server::handleCommand(Client &client, const std::string &line)
 		handlePrivateMessage(client, line);
 	else if (command == "PING")
 		handlePing(client, line);
-	else if (command == "KICK"){}
+	else if (command == "KICK")
+		handleKick(client, line);
 	else if (command == "TOPIC"){}
 	else if (command == "MODE"){}
 }

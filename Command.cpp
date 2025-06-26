@@ -1,5 +1,8 @@
 # include "Server.hpp"
 
+template <typename T>
+void pr(T toPr) { std::cout << toPr << std::endl; }
+
 void Server::handlePass(Client &client, std::istringstream &iss)
 {
 	std::string pass;
@@ -147,8 +150,8 @@ void Server::handlePrivateMessage(Client &client, const std::string &line)
 				send(_clients[i].getFd(), cmd.c_str(), cmd.size(), 0);
 				return ;
 			}
-        std::string yourhost = ERR_NOSUCHNICK + target + " :No such nick\r\n";
-        send(client.getFd(), yourhost.c_str(), yourhost.size(), 0);
+        std::string errorReply = ERR_NOSUCHNICK + target + " :No such nick\r\n";
+        send(client.getFd(), errorReply.c_str(), errorReply.size(), 0);
 	}
 }
 
@@ -162,4 +165,40 @@ void Server::handlePing(Client &client, const std::string &line)
         token = "";
     std::string pong = "PONG :" + token + "\r\n";
     send(client.getFd(), pong.c_str(), pong.size(), 0);
+}
+
+void Server::handleKick(Client &client, const std::string &line)
+{
+    // nick = a user nick
+    // reason = short message as reason
+    // channel = a channel
+    // command : KICK #channel nick :reason
+    short KICKendIndex = 4;
+    std::istringstream iss(line.substr(KICKendIndex));
+
+    std::string channel, nick, reason;
+    Channel *chan;
+
+    iss >> channel >> nick >> reason;
+    channel = channel.substr(1); // "#channel" - '#' = "channel"
+    pr("channel: " + channel);
+    pr("nick: " + nick);
+    pr("reason: " + reason);
+    chan = findChannel(channel);
+    if (chan == NULL) 
+    {
+        std::string errorReply = ERR_NOSUCHCHANNEL + client.getNick() + " " + channel + " :No such channel\r\n";
+        send(client.getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return ;
+    }
+    size_t len = this->_clients.size();
+	for (size_t i = 0; i < len; i++)
+		if (this->_clients[i].getNick() == nick)
+		{
+			std::string cmd = ":" + client.getNick() + "!" + client.getUser() + "@localhost KICK #" + channel + " " + _clients[i].getNick() + " " + reason + "\r\n";
+			send(_clients[i].getFd(), cmd.c_str(), cmd.size(), 0);
+			return ;
+		}
+    std::string errorReply = ERR_NOSUCHNICK + nick + " :No such nick\r\n";
+    send(client.getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
