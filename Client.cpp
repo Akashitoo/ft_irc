@@ -63,3 +63,8 @@ bool Client::getDisconnected() const {
 void Client::appendToBuffer(const std::string& data) {
 	_buffer += data;
 }
+
+bool Client::operator==(const Client& user)
+{
+    return (this->_fd == user.getFd());
+}

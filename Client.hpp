@@ -22,6 +22,7 @@ class Client {
     Client(int fd);
 	~Client();
 
+    bool operator==(const Client& user);
 	
 	std::string& getBuffer();
 	void appendToBuffer(const std::string& data);
