@@ -26,8 +26,8 @@ class Server
 	void handlePing(Client &client, const std::string &line);
 	void handleJoin(Client &client, const std::string &line);
 	void handlePrivateMessage(Client &client, const std::string &line);
+	void handlePart(Client &client, const std::string &line);
 	
-
 	void checkRegistration(Client &client);
 	Channel* findChannel(std::string name);
 

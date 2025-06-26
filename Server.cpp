@@ -81,6 +81,10 @@ void Server::handleCommand(Client &client, const std::string &line)
 	else if (command == "KICK"){}
 	else if (command == "TOPIC"){}
 	else if (command == "MODE"){}
+	else if (command == "PART"){
+		handlePart(client, line);
+	}
+
 }
 
 void Server::add_client()

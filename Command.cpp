@@ -161,3 +161,27 @@ void Server::handlePing(Client &client, const std::string &line)
     std::string pong = "PONG :" + token + "\r\n";
     send(client.getFd(), pong.c_str(), pong.size(), 0);
 }
+
+void Server::handlePart(Client &client, const std::string &line)
+{
+    // std::string part = line.substr(line.find('#' + 1));
+
+    size_t pos = line.find('#');
+    std::string part;
+    if(pos != std::string::npos)
+    {
+        part = line.substr(pos);
+    }
+    else
+    {
+        std::cout << "test not found" << std::endl;
+    }
+    Channel *chan = this->findChannel(part);
+    if(chan) {
+        chan->RemoveUser(client);
+    }
+    else
+    {
+        std::cout << "TEST" << std::endl;
+    }
+}

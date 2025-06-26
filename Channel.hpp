@@ -25,6 +25,7 @@ class Channel
 		void addOperator(Client& user);
 		void sendToUsersMessage(std::string message, Client& sender);
 		void sendToUsersNewUser(Client& sender);
+		void RemoveUser(Client &client);
 
 		std::string getName(); 
 };
