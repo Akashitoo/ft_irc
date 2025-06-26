@@ -31,11 +31,11 @@ void Server::checkRegistration(Client &client)
         
         // Envoyer les messages de bienvenue
         // RPL_WELCOME (001)
-        std::string welcome = ":localhost 001 " + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@localhost\r\n";
+        std::string welcome = RPL_WELCOME + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@localhost\r\n";
         send(client.getFd(), welcome.c_str(), welcome.size(), 0);
         
         // RPL_YOURHOST (002)
-        std::string yourhost = ":localhost 002 " + nick + " :Your host is localhost, running version 1.0\r\n";
+        std::string yourhost = RPL_YOURHOST + nick + " :Your host is localhost, running version 1.0\r\n";
         send(client.getFd(), yourhost.c_str(), yourhost.size(), 0);
         
         // RPL_CREATED (003)
@@ -43,7 +43,7 @@ void Server::checkRegistration(Client &client)
         // send(client.getFd(), created.c_str(), created.size(), 0);
         
         // RPL_MYINFO (004)
-        std::string myinfo = ":localhost 004 " + nick + " localhost 1.0 o o\r\n";
+        std::string myinfo = RPL_MYINFO + nick + " localhost 1.0 o o\r\n";
         send(client.getFd(), myinfo.c_str(), myinfo.size(), 0);
     }
 }

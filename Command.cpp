@@ -141,12 +141,14 @@ void Server::handlePrivateMessage(Client &client, const std::string &line)
 		std::string msg = line.substr(line.find(" ", dest + 1) + 2);
 		size_t len = this->_clients.size();
 		for (size_t i = 0; i < len; i++)
-				if (this->_clients[i].getNick() == target)
-				{
-					std::string cmd = ":" + client.getNick() + "!" + client.getUser() + "@localhost PRIVMSG " + target + " :" + msg + "\r\n";
-					send(_clients[i].getFd(), cmd.c_str(), cmd.size(), 0);
-					return ;
-				}
+			if (this->_clients[i].getNick() == target)
+			{
+				std::string cmd = ":" + client.getNick() + "!" + client.getUser() + "@localhost PRIVMSG " + target + " :" + msg + "\r\n";
+				send(_clients[i].getFd(), cmd.c_str(), cmd.size(), 0);
+				return ;
+			}
+        std::string yourhost = ERR_NOSUCHNICK + target + " :No such nick\r\n";
+        send(client.getFd(), yourhost.c_str(), yourhost.size(), 0);
 	}
 }
 
