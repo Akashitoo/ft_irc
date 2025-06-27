@@ -207,3 +207,55 @@ void Server::handleKick(Client *client, const std::string &line)
     std::string errorReply = ERR_NOSUCHNICK + client->getNick() + " " + nick + " :No such nick\r\n";
     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
+
+void Server::handleTopic(Client *client, const std::string &line)
+{
+    // |TOPIC |
+    // |TOPIC #channelPARAM :<newTopicPARAM>|
+    // |TOPIC #channelPARAM|
+    if (line == "TOPIC ") 
+    {
+        // check if raw command is TOPIC without params with "/topic" in irssi
+        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " TOPIC :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    std::istringstream iss(line.substr(TOPIC_DELIM));
+    std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); }// removing '#' in front of channel if he s here
+    Channel *tempChan = findChannel(channelPARAM);
+    if (tempChan == NULL)   
+    {
+        // check no such chann
+        std::string errorRPL = ERR_NOSUCHCHANNEL + client->getNick() + " " + channelPARAM + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    else if (!tempChan->isOnChannel(client))
+    {
+        // check not on chann
+        std::string errorRPL = ERR_NOTONCHANNEL + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    if (iss.eof())
+    {
+        // view topics
+        std::string RPL;
+        if (tempChan->getTopic().empty())
+            RPL = RPL_NOTOPIC + client->getNick() + " #" + channelPARAM + " :No topic is set\r\n";
+        else
+            RPL = RPL_TOPIC + client->getNick() + " #" + channelPARAM + " :" + tempChan->getTopic() + "\r\n";
+        send(client->getFd(), RPL.c_str(), RPL.size(), 0);
+    }
+    else
+    {
+        // setting topics
+        if (!tempChan->isOperator(client))   
+        {
+            // check trying to change without being operator
+            std::string errorRPL = ERR_CHANOPRIVSNEEDED + client->getNick() + " " + channelPARAM + " :You're not channel operator\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+        }
+        std::string newTopicPARAM = line.substr(line.find(":") + 1);
+        std::string RPL = ":" + client->getNick() + "!" + client->getUser() + "@localhost TOPIC #" + channelPARAM + " :" + newTopicPARAM + "\r\n";
+        send(client->getFd(), RPL.c_str(), RPL.size(), 0);
+    }
+}
+
