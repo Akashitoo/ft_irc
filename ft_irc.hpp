@@ -25,6 +25,7 @@
 
 //Raw commands delimiters
 #define TOPIC_DELIM 5
+#define KICK_DELIM 4
 
 //Replies
 #define RPL_WELCOME        ":localhost 001 "
