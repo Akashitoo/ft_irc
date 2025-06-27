@@ -213,13 +213,12 @@ void Server::handlePart(Client *client, const std::string &line)
     size_t pos = line.find('#');
     if(pos == std::string::npos)
         return ;
-    std::string part = line.substr(pos + 1);
-    std::cout << part << '\n';
-    Channel *chan = this->findChannel(part);
+    std::string channel_part = line.substr(pos + 1);
+    // std::cout << channel_part << '\n';
+    Channel *chan = this->findChannel(channel_part);
     
     if(!chan)
         return;
-
     std::string re;
     size_t rpos = line.find(':', pos);
     if(rpos != std::string::npos)
@@ -227,9 +226,8 @@ void Server::handlePart(Client *client, const std::string &line)
     else
         re = client->getNick();
 
-    std::cout << re << '\n';
-    std::string msg = ":" + client->getNick() + "!" + client->getUser() + "@localhost PART " + part + " :" + re + "\r\n";
+    // std::cout << re << '\n';
+    std::string msg = ":" + client->getNick() + "!" + client->getUser() + "@localhost PART #" + channel_part + " :" + re + "\r\n";
     chan->sendToUsersCommand(msg);
-
     chan->eraseUser(client);
 }
