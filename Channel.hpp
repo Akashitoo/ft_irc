@@ -11,6 +11,7 @@ class Channel
 	private :
 
 		std::string				_name;
+		std::string				_topic;
 		std::vector<Client*>	_users;
 		std::vector<Client*>	_operators;
 
@@ -32,10 +33,13 @@ class Channel
 
 		bool 							isOperator(Client* user);
 
+		void setTopic(std::string topic);
+
 		std::vector<Client*>		getUsers();
 		std::vector<Client*>		getOperators();
 
 		std::string getName(); 
+		std::string getTopic(); 
 };
 
 #endif

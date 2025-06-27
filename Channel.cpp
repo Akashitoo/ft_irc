@@ -72,3 +72,14 @@ std::vector<Client*> Channel::getUsers()
 {
 	return (this->_users);
 }
+
+void Channel::setTopic(std::string topic)
+{
+	_topic = topic;
+}
+
+std::string Channel::getTopic()
+{
+	return _topic;
+}
+
