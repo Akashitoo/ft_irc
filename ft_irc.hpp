@@ -23,7 +23,10 @@
 # include "Server.hpp"
 # include "Channel.hpp"
 
-// Reply codes
+//Raw commands delimiters
+#define TOPIC_DELIM 5
+
+//Replies
 #define RPL_WELCOME        ":localhost 001 "
 #define RPL_YOURHOST       ":localhost 002 "
 #define RPL_CREATED        ":localhost 003 "
@@ -73,6 +76,7 @@
 #define RPL_ENDOFUSERS        ":localhost 394 "
 #define RPL_NOUSERS           ":localhost 395 "
 
+//Error replies
 #define ERR_NOSUCHNICK         ":localhost 401 "
 #define ERR_NOSUCHSERVER       ":localhost 402 "
 #define ERR_NOSUCHCHANNEL      ":localhost 403 "
@@ -86,32 +90,26 @@
 #define ERR_NOTOPLEVEL         ":localhost 413 "
 #define ERR_WILDTOPLEVEL       ":localhost 414 "
 #define ERR_BADMASK            ":localhost 415 "
-
 #define ERR_UNKNOWNCOMMAND     ":localhost 421 "
 #define ERR_NOMOTD             ":localhost 422 "
 #define ERR_NOADMININFO        ":localhost 423 "
 #define ERR_FILEERROR          ":localhost 424 "
-
 #define ERR_NONICKNAMEGIVEN    ":localhost 431 "
 #define ERR_ERRONEUSNICKNAME   ":localhost 432 "
 #define ERR_NICKNAMEINUSE      ":localhost 433 "
 #define ERR_NICKCOLLISION      ":localhost 436 "
-
 #define ERR_USERNOTINCHANNEL   ":localhost 441 "
 #define ERR_NOTONCHANNEL       ":localhost 442 "
 #define ERR_USERONCHANNEL      ":localhost 443 "
 #define ERR_NOLOGIN            ":localhost 444 "
 #define ERR_SUMMONDISABLED     ":localhost 445 "
 #define ERR_USERSDISABLED      ":localhost 446 "
-
 #define ERR_NOTREGISTERED      ":localhost 451 "
-
 #define ERR_NEEDMOREPARAMS     ":localhost 461 "
 #define ERR_ALREADYREGISTRED   ":localhost 462 "
 #define ERR_NOPERMFORHOST      ":localhost 463 "
 #define ERR_PASSWDMISMATCH     ":localhost 464 "
 #define ERR_YOUREBANNEDCREEP   ":localhost 465 "
-
 #define ERR_KEYSET             ":localhost 467 "
 #define ERR_CHANNELISFULL      ":localhost 471 "
 #define ERR_UNKNOWNMODE        ":localhost 472 "
@@ -121,9 +119,7 @@
 #define ERR_NOPRIVILEGES       ":localhost 481 "
 #define ERR_CHANOPRIVSNEEDED   ":localhost 482 "
 #define ERR_CANTKILLSERVER     ":localhost 483 "
-
 #define ERR_NOOPERHOST         ":localhost 491 "
-
 #define ERR_UMODEUNKNOWNFLAG   ":localhost 501 "
 #define ERR_USERSDONTMATCH     ":localhost 502 "
 
