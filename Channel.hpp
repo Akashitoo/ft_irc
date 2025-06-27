@@ -32,6 +32,7 @@ class Channel
 		void 							sendToUsersCommand(std::string cmd);
 
 		bool 							isOperator(Client* user);
+		bool 							isOnChannel(Client* user);
 
 		void setTopic(std::string topic);
 
