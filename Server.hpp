@@ -27,6 +27,7 @@ class Server
 	void handleJoin(Client *client, const std::string &line);
 	void handleKick(Client *client, const std::string &line);
 	void handlePrivateMessage(Client *client, const std::string &line);
+	void handleTopic(Client *client, const std::string &line);
 	
 
 	void checkRegistration(Client *client);
