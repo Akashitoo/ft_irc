@@ -63,12 +63,12 @@ void Channel::sendToUsersCommand(std::string cmd)
 			send((*it)->getFd(), cmd.c_str(), cmd.size(), 0);
 }
 
-bool Channel::isOnChannel(Client* user)
+bool Channel::isOperator(Client* user)
 {
 	return (std::find(this->_operators.begin(), this->_operators.end(), user) != this->_operators.end());
 }
 
-bool Channel::isOperator(Client* user)
+bool Channel::isOnChannel(Client* user)
 {
 	return (std::find(this->_operators.begin(), this->_operators.end(), user) != this->_operators.end());
 }
