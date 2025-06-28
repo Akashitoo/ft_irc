@@ -123,8 +123,10 @@ void Server::handleJoin(Client *client, const std::string &line)
         chan = this->_channels.back();
 		chan->addOperator(client);
 	}
+    client->joinChannel(chan);
 	chan->addUser(client);
 	chan->sendToUsersNewUser(client);
+    chan->printUsers(client);
 }
 
 void Server::handlePrivateMessage(Client *client, const std::string &line)
@@ -153,7 +155,7 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 				send(_clients[i]->getFd(), cmd.c_str(), cmd.size(), 0);
 				return ;
 			}
-        std::string errorReply = ERR_NOSUCHNICK + target + " :No such nick\r\n";
+        std::string errorReply = std::string(ERR_NOSUCHNICK) + target + " :No such nick\r\n";
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 	}
 }
@@ -185,13 +187,15 @@ void Server::handleKick(Client *client, const std::string &line)
     
     if (chan == NULL) 
     {
-        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel + " :No such channel\r\n";
+        std::string errorReply = std::string(ERR_NOSUCHCHANNEL) + "#" + channel + " :No such channel\r\n";
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
-        return ;
+        return;
     }
     if (!chan->isOperator(client))
     {
-        std::string errorReply = ERR_CHANOPRIVSNEEDED + client->getNick() + " " + channel + " :You're not channel operator\r\n";
+        std::string errorReply = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
+
+        std::cout << errorReply << '\n';
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
         return ;
     }

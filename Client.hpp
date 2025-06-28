@@ -4,6 +4,7 @@
 # include "Server.hpp"
 
 //A REVOIR
+class Channel;
 
 class Client {
     private :
@@ -16,6 +17,7 @@ class Client {
 	std::string _buffer;
     bool _verif;
 	bool _disconnected;
+    std::vector<Channel*> _joinedChannels;
 
     public :
 
@@ -41,7 +43,9 @@ class Client {
     // void setJoin(const std::string& join);
     void setVerif(bool value);
     void setDisconnected(bool value);
-
+    void joinChannel(Channel* channel);
+    
+    std::vector<Channel *> getJoinedChannels();
     
 };
 #endif
