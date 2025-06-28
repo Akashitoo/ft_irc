@@ -21,16 +21,15 @@ class Channel
 		Channel(std::string name);
 		~Channel();
 
-		void 							addUser(Client* user);
-		void 							addOperator(Client* user);
-		void 							eraseUser(Client* user);
-		void 							erasedOperator(Client* user);
-
-		void 							sendToUsersMessage(std::string message, Client* sender);
-		void 							sendToUsersNewUser(Client* sender);
-		void 							sendToUsersCommand(std::string cmd);
-
-		bool 							isOperator(Client* user);
+		void 	addUser(Client* user);
+		void 	addOperator(Client* user);
+		void 	eraseUser(Client* user);
+		void 	erasedOperator(Client* user);
+		void 	sendToUsersMessage(std::string message, Client* sender);
+		void 	sendToUsersNewUser(Client* sender);
+		void 	sendToUsersCommand(std::string cmd)	;
+		void	printUsers(Client* client);
+		bool 	isOperator(Client* user);
 
 		std::vector<Client*>		getUsers();
 		std::vector<Client*>		getOperators();

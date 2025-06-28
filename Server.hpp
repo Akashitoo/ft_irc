@@ -11,6 +11,12 @@ class Server
 
 	private :
 
+	typedef struct s_NameToFunc
+	{
+		const std::string RAW;
+		void (Server::*handle)(Client *client, const std::string &line);
+	} t_NameToFunc;
+
 	std::vector<struct pollfd> _fds;
 	std::vector<Client*> _clients;
 	std::vector<Channel*> _channels;
@@ -27,6 +33,7 @@ class Server
 	void handleJoin(Client *client, const std::string &line);
 	void handleKick(Client *client, const std::string &line);
 	void handlePrivateMessage(Client *client, const std::string &line);
+	void handleQuit(Client* client, const std::string &line);
 	
 
 	void checkRegistration(Client *client);

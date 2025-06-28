@@ -68,3 +68,14 @@ bool Client::operator==(const Client& user)
 {
     return (this->_fd == user.getFd());
 }
+
+
+void Client::joinChannel(Channel* channel)
+{
+    this->_joinedChannels.push_back(channel);
+}
+
+std::vector<Channel *> Client::getJoinedChannels()
+{
+    return(this->_joinedChannels);
+}
