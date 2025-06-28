@@ -84,7 +84,8 @@ void Server::handleCommand(Client *client, const std::string &line)
 		handleKick(client, line);
 	else if (command == "TOPIC")
 		handleTopic(client, line);
-	else if (command == "MODE"){}
+	else if (command == "MODE")
+		handleMode(client, line);
 }
 
 void Server::add_client()
