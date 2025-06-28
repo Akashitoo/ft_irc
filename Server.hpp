@@ -29,6 +29,11 @@ class Server
 	void handlePrivateMessage(Client *client, const std::string &line);
 	void handleTopic(Client *client, const std::string &line);
 	void handleMode(Client *client, const std::string &line);
+	void handlePart(Client *client, const std::string &line);
+	void handleInvite(Client *client, const std::string &line);
+	
+
+	void handleQuit(Client* client, const std::string &line);
 	
 
 	void checkRegistration(Client *client);

@@ -136,8 +136,13 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 		std::string channel = line.substr(dest + 2, line.find(" ", dest + 1) - (dest + 2));
 		Channel* chan = this->findChannel(channel);
 		if (!chan)
-		{
-		}
+            return;
+        if (!chan->isUser(client))
+        {
+            std::string errorReply = ERR_CANNOTSENDTOCHAN + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
+            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            return;
+        }
 		std::string msg = line.substr(line.find(" ", dest + 1) + 2);
 		chan->sendToUsersMessage(msg , client);
 	}
@@ -157,6 +162,7 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 	}
 }
+
 
 void Server::handlePing(Client *client, const std::string &line)
 {
@@ -215,7 +221,8 @@ void Server::handleKick(Client *client, const std::string &line)
     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
 
-void Server::handleTopic(Client *client, const std::string &line)
+
+void Server::handleTopic(Client* client, const std::string &line)
 {
     // |TOPIC |
     // |TOPIC #channelPARAM :<newTopicPARAM>|
@@ -353,5 +360,75 @@ void Server::handleMode(Client *client, const std::string &line)
     send(client->getFd(), RPL.c_str(), RPL.size(), 0);
 }
 
+void Server::handleInvite(Client *client, const std::string &line)
+{
+    std::istringstream iss(line.substr(7));
+    std::string target;
+    std::string channel;
+    iss >> target >> channel;
+
+    if(channel[0] == '#')
+        channel = channel.substr(1);
+    //gere si le chan existe
+    Channel *chan = findChannel(channel);
+    if (!chan)
+    {
+        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel + " :No such channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+    //gere si le client qui invite existe
+    if(!chan->isUser(client))
+    {
+        std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel + " :You're not on that channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+     std::vector<Client*> targets_client;
+    for (size_t i = 0; i < _clients.size(); i++)
+    {
+        if (_clients[i]->getNick() == target)
+            targets_client.push_back(_clients[i]);
+    }
+    //client existe pas
+    if (targets_client.empty())
+    {
+        std::string errorReply = ERR_NOSUCHNICK + client->getNick() + " " + target + " :No such nick\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+
+    // Utiliser le premier client trouvé et verif si deja dans le channel
+    Client* targetClient = targets_client[0];
+    if (chan->isUser(targetClient))
+    {
+        std::string errorReply = ERR_USERONCHANNEL + client->getNick() + " " + target + " " + channel + " :is already on channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+
+    std::string inviteMsg = ":" + client->getNick() + "!" + client->getUser() + "@localhost INVITE " + target + " :#" + channel + "\r\n";
+    send(targetClient->getFd(), inviteMsg.c_str(), inviteMsg.size(), 0);
+
+    std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
+    send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
+
+}
 
 
+void Server::handleQuit(Client* client, const std::string &line)
+{
+    std::string reason = line.substr(6);
+    std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost QUIT :" + reason + "\r\n";
+
+    // Obtenir une copie locale des channels pour éviter les problèmes d'itérateurs
+    std::vector<Channel*> joinedChannels = client->getJoinedChannels();
+    
+    // Envoyer le message QUIT à tous les channels où le client était présent
+    for (std::vector<Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); it++)
+    {
+        (*it)->eraseUser(client);
+        (*it)->sendToUsersCommand(cmd);
+    }
+
+}
