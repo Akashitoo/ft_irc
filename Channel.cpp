@@ -146,11 +146,6 @@ void Channel::printUsers(Client* client)
     send(client->getFd(), userList.c_str(), userList.size(), 0);
 }
 
-std::string Channel::getTopic()
-{
-    return _topic;
-}
-
 void Channel::printTopic(Client* client)
 {
 	std::string RPL;

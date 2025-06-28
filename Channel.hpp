@@ -58,6 +58,7 @@ class Channel
 		void setUserLimit(int userLimit);
 
 		void printUsers(Client* client);
+		void printTopic(Client* client);
 };
 
 #endif

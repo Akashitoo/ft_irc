@@ -52,12 +52,6 @@ class Server
 		void add_client();
 		void read_client();
 
-		typedef struct s_NameToFunc
-		{
-			const std::string RAW;
-			void (Server::*handle)(Client *client, const std::string &line);
-		} t_NameToFunc;
-
 };
 
 #endif
