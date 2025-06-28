@@ -26,6 +26,13 @@
 //Raw commands delimiters
 #define TOPIC_DELIM 5
 #define KICK_DELIM 4
+#define PASS_DELIM 4
+#define NICK_DELIM 4
+#define JOIN_DELIM 4
+#define USER_DELIM 4
+#define PING_DELIM 4
+#define MODE_DELIM 4
+#define PRIVMSG_DELIM 7
 
 //Replies
 #define RPL_WELCOME        ":localhost 001 "
@@ -123,6 +130,12 @@
 #define ERR_NOOPERHOST         ":localhost 491 "
 #define ERR_UMODEUNKNOWNFLAG   ":localhost 501 "
 #define ERR_USERSDONTMATCH     ":localhost 502 "
+
+typedef struct s_NameToFunc
+{
+	const std::string RAW;
+	void (Server::*handle)(Client *client, const std::string &line);
+} t_NameToFunc;
 
 class BindFailed : public std::exception {
 

@@ -19,9 +19,9 @@ class Server
 	const	int 			_port;
 	void handleClientInput(Client *client, const std::string &input, size_t fd_index);
 	void handleCommand(Client *client, const std::string &line);
-	void handlePass(Client *client, std::istringstream &iss);
-	void handleNick(Client *client, std::istringstream &iss);
-	void handleUser(Client *client, std::istringstream &iss);
+	void handlePass(Client *client, const std::string &line);
+	void handleNick(Client *client, const std::string &line);
+	void handleUser(Client *client, const std::string &line);
 	// void handlePing(Client &client, std::istringstream &iss); idk if this is mandatory to keep
 	void handlePing(Client *client, const std::string &line);
 	void handleJoin(Client *client, const std::string &line);

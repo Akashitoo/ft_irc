@@ -3,8 +3,9 @@
 template <typename T>
 void pr(T toPr) { std::cout << toPr << std::endl; }
 
-void Server::handlePass(Client *client, std::istringstream &iss)
+void Server::handlePass(Client *client, const std::string &line)
 {
+    std::istringstream iss(line.substr(PASS_DELIM));
 	std::string pass;
 	iss >> pass;
 
@@ -28,7 +29,7 @@ void Server::handlePass(Client *client, std::istringstream &iss)
 	}
 }
 
-void Server::handleNick(Client *client, std::istringstream &iss)
+void Server::handleNick(Client *client, const std::string &line)
 {
 	 if (!client->getVerif())
 	{
@@ -36,6 +37,7 @@ void Server::handleNick(Client *client, std::istringstream &iss)
         send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
         return;
 	}
+    std::istringstream iss(line.substr(NICK_DELIM));
     std::string nick;
     iss >> nick;
     if (nick.empty())
@@ -80,15 +82,16 @@ void Server::handleNick(Client *client, std::istringstream &iss)
     checkRegistration(client);
 }
 
-void Server::handleUser(Client *client, std::istringstream &iss)
+void Server::handleUser(Client *client, const std::string &line)
 {
-    std::string username, hostname, servername, realname;
     if (!client->getVerif())
 	{
 		std::string error_msg = ":localhost 430 : NO VALID\r\n";
         send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
         return;
 	}
+    std::istringstream iss(line.substr(USER_DELIM));
+    std::string username, hostname, servername, realname;
     iss >> username;
     if (username.empty())
     {
@@ -157,7 +160,7 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 
 void Server::handlePing(Client *client, const std::string &line)
 {
-	 std::string token;
+	std::string token;
     std::size_t pos = line.find(':');
     if (pos != std::string::npos)
         token = line.substr(pos + 1);
@@ -169,15 +172,17 @@ void Server::handlePing(Client *client, const std::string &line)
 
 void Server::handleKick(Client *client, const std::string &line)
 {
-    short KICKendIndex = 4;
-    std::istringstream iss(line.substr(KICKendIndex));
+    std::istringstream iss(line.substr(KICK_DELIM));
 
     std::string channel, nick, reason;
     Channel *chan;
 
-    iss >> channel >> nick >> reason;
-    channel = channel.substr(1); // "#channel" - '#' = "channel"
+    iss >> channel >> nick;
+
+    reason = line.substr(line.find(" :") + 2);
+    channel = channel.substr(1);
     chan = findChannel(channel);
+    
     if (chan == NULL) 
     {
         std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel + " :No such channel\r\n";
@@ -190,21 +195,21 @@ void Server::handleKick(Client *client, const std::string &line)
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
         return ;
     }
-    
-    size_t len = chan->getUsers().size();
-	
-    for (size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < chan->getUsers().size(); i++)
     {
         if (chan->getUsers()[i]->getNick() == nick)
         {
-            std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost KICK #" + channel + " " + chan->getUsers()[i]->getNick() + " :" + reason + "\r\n";
+            Client* kicked;
+
+            kicked = chan->getUsers()[i];
+            std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost KICK #" + channel + " " + chan->getUsers()[i]->getNick() + " :"+ reason + "\r\n";
             chan->sendToUsersCommand(cmd);
-            chan->eraseUser(this->_clients[i]);
+            chan->eraseUser(kicked);
+            send(kicked->getFd(), cmd.c_str(), cmd.size(), 0);
             return ;
         }
     }
-
-    std::string errorReply = ERR_NOSUCHNICK + client->getNick() + " " + nick + " :No such nick\r\n";
+    std::string errorReply = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + nick + " #" + channel +": No such nick\r\n";
     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
 
@@ -225,7 +230,7 @@ void Server::handleTopic(Client *client, const std::string &line)
     if (tempChan == NULL)   
     {
         // check no such chann
-        std::string errorRPL = ERR_NOSUCHCHANNEL + client->getNick() + " " + channelPARAM + " :No such channel\r\n";
+        std::string errorRPL = ERR_NOSUCHCHANNEL + client->getNick() + " #" + channelPARAM + " :No such channel\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     else if (!tempChan->isOnChannel(client))
@@ -250,7 +255,7 @@ void Server::handleTopic(Client *client, const std::string &line)
         if (!tempChan->isOperator(client))   
         {
             // check trying to change without being operator
-            std::string errorRPL = ERR_CHANOPRIVSNEEDED + client->getNick() + " " + channelPARAM + " :You're not channel operator\r\n";
+            std::string errorRPL = ERR_CHANOPRIVSNEEDED + client->getNick() + " #" + channelPARAM + " :You're not channel operator\r\n";
             send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
         }
         std::string newTopicPARAM = line.substr(line.find(":") + 1);
@@ -258,4 +263,16 @@ void Server::handleTopic(Client *client, const std::string &line)
         send(client->getFd(), RPL.c_str(), RPL.size(), 0);
     }
 }
+
+void Server::handleMode(Client *client, const std::string &line)
+{
+    // |MODE #channel +o khadj-me|
+    // |MODE #channel -m|
+    // |MODE khadj-me|
+
+    (void)client;
+    (void)line;
+}
+
+
 
