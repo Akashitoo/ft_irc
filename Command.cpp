@@ -271,9 +271,11 @@ void Server::handleTopic(Client *client, const std::string &line)
 
 void Server::handleMode(Client *client, const std::string &line)
 {
-    // |MODE #channel +o khadj-me|
-    // |MODE #channel -m|
-    // |MODE khadj-me|
+    // |MODE <#channel> +i| or - change invite-only channel status
+    // |MODE <#channel> +t| or - topic access protection
+    // |MODE <#channel> +k <key or password>| or - change keypass
+    // |MODE <#channel> +o <nick>| or - modify a users operator state
+    // |MODE <#channel> +l <limit>| or - manage channel user limit
 
     (void)client;
     (void)line;
