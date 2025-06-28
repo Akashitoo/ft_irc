@@ -13,7 +13,7 @@ class Channel
 		std::string				_name;
 		std::vector<Client*>	_users;
 		std::vector<Client*>	_operators;
-
+		std::string				_topic;
 		
 
 	public :
@@ -29,12 +29,14 @@ class Channel
 		void 	sendToUsersNewUser(Client* sender);
 		void 	sendToUsersCommand(std::string cmd)	;
 		void	printUsers(Client* client);
+		void	printTopic(Client* client);
 		bool 	isOperator(Client* user);
 
 		std::vector<Client*>		getUsers();
 		std::vector<Client*>		getOperators();
 
-		std::string getName(); 
+		std::string getName();
+		std::string getTopic(); 
 };
 
 #endif

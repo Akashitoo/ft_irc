@@ -134,12 +134,6 @@
 
 class Server;
 
-typedef struct s_NameToFunc
-	{
-		const std::string RAW;
-		void (Server::*handle)(Client *client, const std::string &line);
-	} t_NameToFunc;
-
 class BindFailed : public std::exception {
 
 	public:

@@ -35,6 +35,12 @@ class Server
 
 	public : 
 
+		typedef struct s_NameToFunc
+		{
+			const std::string RAW;
+			void (Server::*handle)(Client *client, const std::string &line);
+		} t_NameToFunc;
+
 		Server(std::string password, int port);
 		Server(const Server& src);
 		Server& operator=(const Server& src);

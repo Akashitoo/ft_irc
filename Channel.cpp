@@ -73,7 +73,6 @@ std::vector<Client*> Channel::getUsers()
 	return (this->_users);
 }
 
-
 void Channel::printUsers(Client* client)
 {
 	std::string channel = this->_name;
@@ -90,4 +89,20 @@ void Channel::printUsers(Client* client)
     userList += "\r\n";
     userList += RPL_ENDOFNAMES + client->getNick() + " #" + channel + " :" + "End of /NAMES list.\r\n";
     send(client->getFd(), userList.c_str(), userList.size(), 0);
+}
+
+std::string Channel::getTopic()
+{
+    return _topic;
+}
+
+void Channel::printTopic(Client* client)
+{
+	std::string RPL;
+
+	if (this->getTopic().empty())
+		RPL = RPL_NOTOPIC + client->getNick() + " #" + this->_name+ " :No topic is set\r\n";
+	else
+		RPL = RPL_TOPIC + client->getNick() + " #" + this->_name + " :" + this->getTopic() + "\r\n";
+	send(client->getFd(), RPL.c_str(), RPL.size(), 0);
 }

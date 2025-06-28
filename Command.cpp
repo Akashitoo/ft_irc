@@ -124,6 +124,7 @@ void Server::handleJoin(Client *client, const std::string &line)
 	chan->addUser(client);
 	chan->sendToUsersNewUser(client);
     chan->printUsers(client);
+    chan->printTopic(client);
 }
 
 void Server::handlePrivateMessage(Client *client, const std::string &line)
@@ -211,7 +212,7 @@ void Server::handleKick(Client *client, const std::string &line)
             return ;
         }
     }
-    std::string errorReply = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + nick + " #" + channel +": No such nick\r\n";
+    std::string errorReply = std::string(ERR_NOSUCHNICK) + "#"+ channel + " :No such nick\r\n";
     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
 
