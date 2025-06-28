@@ -1,10 +1,8 @@
 # include "Server.hpp"
 
-template <typename T>
-void pr(T toPr) { std::cout << toPr << std::endl; }
-
-void Server::handlePass(Client *client, std::istringstream &iss)
+void Server::handlePass(Client *client, const std::string &line)
 {
+    std::istringstream iss(line.substr(PASS_DELIM));
 	std::string pass;
 	iss >> pass;
 
@@ -28,7 +26,7 @@ void Server::handlePass(Client *client, std::istringstream &iss)
 	}
 }
 
-void Server::handleNick(Client *client, std::istringstream &iss)
+void Server::handleNick(Client *client, const std::string &line)
 {
 	 if (!client->getVerif())
 	{
@@ -36,6 +34,7 @@ void Server::handleNick(Client *client, std::istringstream &iss)
         send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
         return;
 	}
+    std::istringstream iss(line.substr(NICK_DELIM));
     std::string nick;
     iss >> nick;
     if (nick.empty())
@@ -80,15 +79,16 @@ void Server::handleNick(Client *client, std::istringstream &iss)
     checkRegistration(client);
 }
 
-void Server::handleUser(Client *client, std::istringstream &iss)
+void Server::handleUser(Client *client, const std::string &line)
 {
-    std::string username, hostname, servername, realname;
     if (!client->getVerif())
 	{
 		std::string error_msg = ":localhost 430 : NO VALID\r\n";
         send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
         return;
 	}
+    std::istringstream iss(line.substr(USER_DELIM));
+    std::string username, hostname, servername, realname;
     iss >> username;
     if (username.empty())
     {
@@ -160,7 +160,7 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 
 void Server::handlePing(Client *client, const std::string &line)
 {
-	 std::string token;
+	std::string token;
     std::size_t pos = line.find(':');
     if (pos != std::string::npos)
         token = line.substr(pos + 1);
@@ -172,8 +172,7 @@ void Server::handlePing(Client *client, const std::string &line)
 
 void Server::handleKick(Client *client, const std::string &line)
 {
-    short KICKendIndex = 4;
-    std::istringstream iss(line.substr(KICKendIndex));
+    std::istringstream iss(line.substr(KICK_DELIM));
 
     std::string channel, nick, reason;
     Channel *chan;
@@ -216,20 +215,143 @@ void Server::handleKick(Client *client, const std::string &line)
     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
 
-
-void Server::handleQuit(Client* client, const std::string &line)
+void Server::handleTopic(Client *client, const std::string &line)
 {
-    std::string reason = line.substr(6);
-    std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost QUIT :" + reason + "\r\n";
+    // |TOPIC |
+    // |TOPIC #channelPARAM :<newTopicPARAM>|
+    // |TOPIC #channelPARAM|
 
-    // Obtenir une copie locale des channels pour éviter les problèmes d'itérateurs
-    std::vector<Channel*> joinedChannels = client->getJoinedChannels();
-    
-    // Envoyer le message QUIT à tous les channels où le client était présent
-    for (std::vector<Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); it++)
+    if (line == "TOPIC ") 
     {
-        (*it)->eraseUser(client);
-        (*it)->sendToUsersCommand(cmd);
+        // check if raw command is TOPIC without params with "/topic" in irssi
+        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " TOPIC :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
-
+    std::istringstream iss(line.substr(TOPIC_DELIM));
+    std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); }// removing '#' in front of channel if he s here
+    Channel *tempChan = findChannel(channelPARAM);
+    if (tempChan == NULL)   
+    {
+        // check no such chann
+        std::string errorRPL = ERR_NOSUCHCHANNEL + client->getNick() + " #" + channelPARAM + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    else if (!tempChan->isOnChannel(client))
+    {
+        // check not on chann
+        std::string errorRPL = ERR_NOTONCHANNEL + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    if (iss.eof())
+    {
+        // view topics
+        std::string RPL;
+        if (tempChan->getTopic().empty())
+            RPL = RPL_NOTOPIC + client->getNick() + " #" + channelPARAM + " :No topic is set\r\n";
+        else
+            RPL = RPL_TOPIC + client->getNick() + " #" + channelPARAM + " :" + tempChan->getTopic() + "\r\n";
+        send(client->getFd(), RPL.c_str(), RPL.size(), 0);
+    }
+    else
+    {
+        // setting topics
+        if (!tempChan->isOperator(client) && tempChan->getTopicOpOnly())   
+        {
+            // check trying to change without being operator
+            std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channelPARAM + " :You're not channel operator\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+        }
+        std::string newTopicPARAM = line.substr(line.find(":") + 1);
+        tempChan->setTopic(newTopicPARAM);
+        std::string RPL = ":" + client->getNick() + "!" + client->getUser() + "@localhost TOPIC #" + channelPARAM + " :" + newTopicPARAM + "\r\n";
+        send(client->getFd(), RPL.c_str(), RPL.size(), 0);
+    }
 }
+
+void Server::handleMode(Client *client, const std::string &line)
+{
+    // |MODE <#channelPARAM> +i| or - change invite-only channel status
+    // |MODE <#channelPARAM> +t| or - topic access protection
+    // |MODE <#channelPARAM> +k <key or password>| or - change keypass
+    // |MODE <#channelPARAM> +o <nick>| or - modify a users operator state
+    // |MODE <#channelPARAM> +l <limit>| or - manage channel user limit
+
+    std::istringstream iss(line.substr(MODE_DELIM));
+    std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); } else return;// removing '#' in front of channel if he s here
+    Channel *tempChan = findChannel(channelPARAM);
+    if (tempChan == NULL)   
+    {
+        // check no such chann
+        std::string errorRPL = ERR_NOSUCHCHANNEL + client->getNick() + " #" + channelPARAM + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    else if (!tempChan->isOnChannel(client))
+    {
+        // check not on chann
+        std::string errorRPL = ERR_NOTONCHANNEL + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    std::string flagPARAM; iss >> flagPARAM;
+    for (size_t i = 1; i < flagPARAM.size(); i++)
+    {
+        switch (flagPARAM[i])
+        {
+            case I:
+                if (flagPARAM[0] == '+')
+                    tempChan->setInviteOnly(true);
+                else
+                    tempChan->setInviteOnly(false);
+                break;
+            case T: 
+                if (flagPARAM[0] == '+')
+                    tempChan->setTopicChOnly(true);
+                else
+                    tempChan->setTopicChOnly(false);
+                break;
+            case K:
+            {
+                std::string newPassKey; iss >> newPassKey;
+                if (!tempChan->getPassKey().empty())
+                {
+                    // check if passkey already set
+                    std::string errorRPL = ERR_KEYSET + client->getNick() + " #" + channelPARAM + " :Channel key already set\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+                }
+                if (flagPARAM[0] == '+')
+                    tempChan->setPassKey(newPassKey);
+                else
+                    tempChan->setPassKey("");
+                break;
+            }
+            case O: 
+            {
+                std::string nickToUpd; iss >> nickToUpd;
+                if (!tempChan->isOnChannel(NULL)) // a la place du null mettre un get du user dans la liste de clients du server
+                {
+                    // check si le nick en parametre est dans le channel
+                    std::string errorRPL = ERR_USERNOTINCHANNEL + client->getNick() + " " + nickToUpd + " #" + channelPARAM + " :Channel key already set\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+                }
+                //if (flagPARAM[0] == '+')
+                    // add client to operators
+                //else
+                    // remove client from operators
+                break;
+            }
+            case L: 
+            {
+                int newUserLimit; iss >> newUserLimit; 
+                if (flagPARAM[0] == '+')
+                    tempChan->setUserLimit(newUserLimit);
+                else
+                    tempChan->setUserLimit(NO_USER_LIMIT); // vu que la userlimit peut pas etre negative alors on la met a -1 pour indiquer l absence de limit
+                break;
+            }
+        }
+    }
+    std::string RPL = ":" + client->getNick() + "!" + client->getUser() + "@localhost MODE #" + channelPARAM + " :" + flagPARAM + "\r\n";
+    send(client->getFd(), RPL.c_str(), RPL.size(), 0);
+}
+
+
+

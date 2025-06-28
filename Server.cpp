@@ -66,24 +66,22 @@ void Server::handleCommand(Client *client, const std::string &line)
 	std::string command;
 	iss >> command;
 
-	if (command == "PASS")
-		handlePass(client, iss);
-	else if (command == "NICK")
-        handleNick(client, iss);
-	else if(command == "USER")
-		handleUser(client, iss);
-	else if (command == "JOIN")
-		handleJoin(client, line);
-	else if (command == "PRIVMSG")
-		handlePrivateMessage(client, line);
-	else if (command == "PING")
-		handlePing(client, line);
-	else if (command == "KICK")
-		handleKick(client, line);
-	else if (command == "TOPIC"){}
-	else if (command == "MODE"){}
-	else if (command == "QUIT")
-		handleQuit(client, line);
+	t_NameToFunc cmds[] = {
+		{ "PASS", &Server::handlePass },
+		{ "NICK", &Server::handleNick },
+		{ "USER", &Server::handleUser },
+		{ "JOIN", &Server::handleJoin },
+		{ "PRIVMSG", &Server::handlePrivateMessage },
+		{ "PING", &Server::handlePing },
+		{ "KICK", &Server::handleKick },
+		{ "TOPIC", &Server::handleTopic },
+		{ "MODE", &Server::handleMode },
+		{ "", NULL }
+	};
+	short i = -1; 
+	while (cmds[++i].RAW != "") 
+		if (cmds[i].RAW == command) 
+			return ((this->*cmds[i].handle)(client, line), (void)0);
 }
 
 void Server::add_client()

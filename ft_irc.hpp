@@ -23,6 +23,9 @@
 # include "Server.hpp"
 # include "Channel.hpp"
 
+//Utils defines
+#define NO_USER_LIMIT -1
+
 //Raw commands delimiters
 #define TOPIC_DELIM 5
 #define KICK_DELIM 4
@@ -34,12 +37,19 @@
 #define MODE_DELIM 4
 #define PRIVMSG_DELIM 7
 
+//MODE RAW flags
+#define I 105
+#define T 116
+#define K 107
+#define O 111
+#define L 108
+
 //Replies
-#define RPL_WELCOME           ":localhost 001 "
-#define RPL_YOURHOST          ":localhost 002 "
-#define RPL_CREATED           ":localhost 003 "
-#define RPL_MYINFO            ":localhost 004 "
-#define RPL_BOUNCE            ":localhost 005 "
+#define RPL_WELCOME        	  ":localhost 001 "
+#define RPL_YOURHOST       	  ":localhost 002 "
+#define RPL_CREATED        	  ":localhost 003 "
+#define RPL_MYINFO         	  ":localhost 004 "
+#define RPL_BOUNCE         	  ":localhost 005 "
 #define RPL_USERHOST          ":localhost 302 "
 #define RPL_ISON              ":localhost 303 "
 #define RPL_AWAY              ":localhost 301 "

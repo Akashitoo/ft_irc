@@ -68,15 +68,70 @@ bool Channel::isOperator(Client* user)
 	return (std::find(this->_operators.begin(), this->_operators.end(), user) != this->_operators.end());
 }
 
+bool Channel::isOnChannel(Client* user)
+{
+	return (std::find(this->_users.begin(), this->_users.end(), user) != this->_users.end());
+}
+
 std::vector<Client*> Channel::getUsers()
 {
 	return (this->_users);
 }
 
+void Channel::setTopic(std::string topic)
+{
+	_topic = topic;
+}
+
+std::string Channel::getTopic()
+{
+	return _topic;
+}
+
+std::string Channel::getPassKey()
+{
+	return _passKey;
+}
+
+bool Channel::getInviteOnly()
+{
+	return _inviteOnly;
+}
+
+bool Channel::getTopicOpOnly()
+{
+	return _topicChangeOpOnly;
+}
+
+int Channel::getUserLimit()
+{
+	return _userLimit;
+}
+
+void Channel::setPassKey(const std::string &passKey)
+{
+	_passKey = passKey;
+}
+
+void Channel::setInviteOnly(const bool &inviteOnly)
+{
+	_inviteOnly = inviteOnly;
+}
+
+void Channel::setTopicChOnly(const bool &topicChangeChOnly)
+{
+	_topicChangeOpOnly = topicChangeChOnly;
+}
+
+void Channel::setUserLimit(int userLimit)
+{
+	_userLimit = userLimit;
+}
+
 void Channel::printUsers(Client* client)
 {
-	std::string channel = this->_name;
-	std::string userList = RPL_NAMREPLY + client->getNick() + " = #" + channel + " :";
+    std::string channel = this->_name;
+    std::string userList = RPL_NAMREPLY + client->getNick() + " = #" + channel + " :";
 
     for (size_t i=0; i < this->getUsers().size(); i++)
     {
@@ -106,3 +161,4 @@ void Channel::printTopic(Client* client)
 		RPL = RPL_TOPIC + client->getNick() + " #" + this->_name + " :" + this->getTopic() + "\r\n";
 	send(client->getFd(), RPL.c_str(), RPL.size(), 0);
 }
+
