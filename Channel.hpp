@@ -41,6 +41,8 @@ class Channel
 
 		std::string getName(); 
 		std::string getTopic(); 
+
+		void printUsers(Client* client);
 };
 
 #endif

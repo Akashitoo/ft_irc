@@ -88,3 +88,21 @@ std::string Channel::getTopic()
 	return _topic;
 }
 
+void Channel::printUsers(Client* client)
+{
+    std::string channel = this->_name;
+    std::string userList = RPL_NAMREPLY + client->getNick() + " = #" + channel + " :";
+
+    for (size_t i=0; i < this->getUsers().size(); i++)
+    {
+        if (this->isOperator(this->getUsers()[i]))
+            userList += "@";
+        userList += this->getUsers()[i]->getNick();
+        if (this->getUsers()[i] != this->getUsers().back())
+            userList += " ";
+    }
+    userList += "\r\n";
+    userList += RPL_ENDOFNAMES + client->getNick() + " #" + channel + " :" + "End of /NAMES list.\r\n";
+    send(client->getFd(), userList.c_str(), userList.size(), 0);
+}
+
