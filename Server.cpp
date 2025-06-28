@@ -81,7 +81,7 @@ void Server::handleCommand(Client *client, const std::string &line)
 	short i = -1; 
 	while (cmds[++i].RAW != "") 
 		if (cmds[i].RAW == command) 
-			(this->*cmds[i].handle)(client, line); return;
+			return ((this->*cmds[i].handle)(client, line), (void)0);
 }
 
 void Server::add_client()
