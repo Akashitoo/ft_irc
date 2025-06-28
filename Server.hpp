@@ -11,12 +11,6 @@ class Server
 
 	private :
 
-	typedef struct s_NameToFunc
-	{
-		const std::string RAW;
-		void (Server::*handle)(Client *client, const std::string &line);
-	} t_NameToFunc;
-
 	std::vector<struct pollfd> _fds;
 	std::vector<Client*> _clients;
 	std::vector<Channel*> _channels;

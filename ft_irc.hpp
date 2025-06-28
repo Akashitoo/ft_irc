@@ -131,6 +131,15 @@
 #define ERR_UMODEUNKNOWNFLAG   ":localhost 501 "
 #define ERR_USERSDONTMATCH     ":localhost 502 "
 
+
+class Server;
+
+typedef struct s_NameToFunc
+	{
+		const std::string RAW;
+		void (Server::*handle)(Client *client, const std::string &line);
+	} t_NameToFunc;
+
 class BindFailed : public std::exception {
 
 	public:
