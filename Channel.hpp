@@ -29,6 +29,8 @@ class Channel
 		void 							sendToUsersMessage(std::string message, Client* sender);
 		void 							sendToUsersNewUser(Client* sender);
 		void 							sendToUsersCommand(std::string cmd);
+		bool 							isUser(Client* user) const;
+
 
 		bool 							isOperator(Client* user);
 

@@ -82,6 +82,10 @@ void Server::handleCommand(Client *client, const std::string &line)
 		handlePing(client, line);
 	else if (command == "KICK")
 		handleKick(client, line);
+	else if (command == "INVITE")
+		{
+			return;
+		}
 	else if (command == "TOPIC"){}
 	else if (command == "MODE"){}
 	else if (command == "PART"){

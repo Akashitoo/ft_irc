@@ -72,3 +72,8 @@ std::vector<Client*> Channel::getUsers()
 {
 	return (this->_users);
 }
+// Add after isOperator method
+bool Channel::isUser(Client* user) const
+{
+    return (std::find(this->_users.begin(), this->_users.end(), user) != this->_users.end());
+}

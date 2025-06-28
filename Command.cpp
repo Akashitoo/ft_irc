@@ -133,8 +133,13 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 		std::string channel = line.substr(dest + 2, line.find(" ", dest + 1) - (dest + 2));
 		Channel* chan = this->findChannel(channel);
 		if (!chan)
-		{
-		}
+            return;
+        if (!chan->isUser(client))
+        {
+            std::string errorReply = ERR_CANNOTSENDTOCHAN + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
+            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            return;
+        }
 		std::string msg = line.substr(line.find(" ", dest + 1) + 2);
 		chan->sendToUsersMessage(msg , client);
 	}
@@ -154,6 +159,7 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 	}
 }
+
 
 void Server::handlePing(Client *client, const std::string &line)
 {
@@ -209,16 +215,34 @@ void Server::handleKick(Client *client, const std::string &line)
 }
 void Server::handlePart(Client *client, const std::string &line)
 {
-    // std::string part = line.substr(line.find('#' + 1));
     size_t pos = line.find('#');
     if(pos == std::string::npos)
         return ;
     std::string channel_part = line.substr(pos + 1);
-    // std::cout << channel_part << '\n';
     Channel *chan = this->findChannel(channel_part);
     
     if(!chan)
+    {
+        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel_part + " :No such channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
         return;
+    }
+
+    bool found = false;
+    std::vector<Client*> users = chan->getUsers();
+    for(size_t i = 0; i < users.size(); i++) {
+        if(users[i] == client) {
+            found = true;
+            break;
+        }
+    }
+    if(!found)
+    {
+        std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel_part + " :You're not on that channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+
     std::string re;
     size_t rpos = line.find(':', pos);
     if(rpos != std::string::npos)
@@ -226,8 +250,12 @@ void Server::handlePart(Client *client, const std::string &line)
     else
         re = client->getNick();
 
-    // std::cout << re << '\n';
     std::string msg = ":" + client->getNick() + "!" + client->getUser() + "@localhost PART #" + channel_part + " :" + re + "\r\n";
     chan->sendToUsersCommand(msg);
     chan->eraseUser(client);
 }
+
+// void Server::handleInvite(Client *client, const std::string &line)
+// {
+
+// }

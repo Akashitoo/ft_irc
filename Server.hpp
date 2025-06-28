@@ -28,6 +28,9 @@ class Server
 	void handleKick(Client *client, const std::string &line);
 	void handlePrivateMessage(Client *client, const std::string &line);
 	void handlePart(Client *client, const std::string &line);
+	void handleInvite(Client *client, const std::string &line);
+	
+
 	
 
 	void checkRegistration(Client *client);
