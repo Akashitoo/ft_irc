@@ -31,6 +31,7 @@ class Server
 	void handleInvite(Client *client, const std::string &line);
 	
 
+	void handleQuit(Client* client, const std::string &line);
 	
 
 	void checkRegistration(Client *client);

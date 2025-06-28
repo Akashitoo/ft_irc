@@ -43,7 +43,7 @@ void Server::checkRegistration(Client *client)
         // send(client.getFd(), created.c_str(), created.size(), 0);
         
         // RPL_MYINFO (004)
-        std::string myinfo = RPL_MYINFO + nick + " localhost 1.0 o o\r\n";
+        std::string myinfo = RPL_MYINFO + nick + " ircserv\r\n";
         send(client->getFd(), myinfo.c_str(), myinfo.size(), 0);
     }
 }
@@ -59,8 +59,6 @@ Channel* Server::findChannel(std::string name)
 	}
 	return (NULL);
 }
-
-
 
 void Server::handleCommand(Client *client, const std::string &line)
 {
@@ -86,12 +84,12 @@ void Server::handleCommand(Client *client, const std::string &line)
 		{
 			return;
 		}
+	else if (command == "PART"){
+		handlePart(client, line);}
 	else if (command == "TOPIC"){}
 	else if (command == "MODE"){}
-	else if (command == "PART"){
-		handlePart(client, line);
-	}
-
+	else if (command == "QUIT")
+		handleQuit(client, line);
 }
 
 void Server::add_client()
@@ -210,7 +208,6 @@ void Server::start()
 	
 	for (size_t i=0; i < this->_clients.size(); i++)
 		delete this->_clients[i];
-	
 	for (size_t i=0; i < this->_channels.size(); i++)
 		delete this->_channels[i];
 }

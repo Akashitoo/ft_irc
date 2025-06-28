@@ -120,8 +120,10 @@ void Server::handleJoin(Client *client, const std::string &line)
         chan = this->_channels.back();
 		chan->addOperator(client);
 	}
+    client->joinChannel(chan);
 	chan->addUser(client);
 	chan->sendToUsersNewUser(client);
+    chan->printUsers(client);
 }
 
 void Server::handlePrivateMessage(Client *client, const std::string &line)
@@ -155,7 +157,7 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 				send(_clients[i]->getFd(), cmd.c_str(), cmd.size(), 0);
 				return ;
 			}
-        std::string errorReply = ERR_NOSUCHNICK + target + " :No such nick\r\n";
+        std::string errorReply = std::string(ERR_NOSUCHNICK) + target + " :No such nick\r\n";
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 	}
 }
@@ -181,36 +183,41 @@ void Server::handleKick(Client *client, const std::string &line)
     std::string channel, nick, reason;
     Channel *chan;
 
-    iss >> channel >> nick >> reason;
-    channel = channel.substr(1); // "#channel" - '#' = "channel"
+    iss >> channel >> nick;
+
+    reason = line.substr(line.find(" :") + 2);
+    channel = channel.substr(1);
     chan = findChannel(channel);
+    
     if (chan == NULL) 
     {
-        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel + " :No such channel\r\n";
+        std::string errorReply = std::string(ERR_NOSUCHCHANNEL) + "#" + channel + " :No such channel\r\n";
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
-        return ;
+        return;
     }
     if (!chan->isOperator(client))
     {
-        std::string errorReply = ERR_CHANOPRIVSNEEDED + client->getNick() + " " + channel + " :You're not channel operator\r\n";
+        std::string errorReply = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
+
+        std::cout << errorReply << '\n';
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
         return ;
     }
-    
-    size_t len = chan->getUsers().size();
-	
-    for (size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < chan->getUsers().size(); i++)
     {
         if (chan->getUsers()[i]->getNick() == nick)
         {
-            std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost KICK #" + channel + " " + chan->getUsers()[i]->getNick() + " :" + reason + "\r\n";
+            Client* kicked;
+
+            kicked = chan->getUsers()[i];
+            std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost KICK #" + channel + " " + chan->getUsers()[i]->getNick() + " :"+ reason + "\r\n";
             chan->sendToUsersCommand(cmd);
-            chan->eraseUser(this->_clients[i]);
+            chan->eraseUser(kicked);
+            send(kicked->getFd(), cmd.c_str(), cmd.size(), 0);
             return ;
         }
     }
-
-    std::string errorReply = ERR_NOSUCHNICK + client->getNick() + " " + nick + " :No such nick\r\n";
+    std::string errorReply = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + nick + " #" + channel +": No such nick\r\n";
     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 }
 void Server::handlePart(Client *client, const std::string &line)
@@ -259,3 +266,21 @@ void Server::handlePart(Client *client, const std::string &line)
 // {
 
 // }
+
+
+void Server::handleQuit(Client* client, const std::string &line)
+{
+    std::string reason = line.substr(6);
+    std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost QUIT :" + reason + "\r\n";
+
+    // Obtenir une copie locale des channels pour éviter les problèmes d'itérateurs
+    std::vector<Channel*> joinedChannels = client->getJoinedChannels();
+    
+    // Envoyer le message QUIT à tous les channels où le client était présent
+    for (std::vector<Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); it++)
+    {
+        (*it)->eraseUser(client);
+        (*it)->sendToUsersCommand(cmd);
+    }
+
+}
