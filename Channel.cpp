@@ -70,7 +70,7 @@ bool Channel::isOperator(Client* user)
 
 bool Channel::isOnChannel(Client* user)
 {
-	return (std::find(this->_operators.begin(), this->_operators.end(), user) != this->_operators.end());
+	return (std::find(this->_users.begin(), this->_users.end(), user) != this->_users.end());
 }
 
 std::vector<Client*> Channel::getUsers()

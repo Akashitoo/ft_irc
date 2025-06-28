@@ -259,10 +259,11 @@ void Server::handleTopic(Client *client, const std::string &line)
         if (!tempChan->isOperator(client))   
         {
             // check trying to change without being operator
-            std::string errorRPL = ERR_CHANOPRIVSNEEDED + client->getNick() + " #" + channelPARAM + " :You're not channel operator\r\n";
+            std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channelPARAM + " :You're not channel operator\r\n";
             send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
         }
         std::string newTopicPARAM = line.substr(line.find(":") + 1);
+        tempChan->setTopic(newTopicPARAM);
         std::string RPL = ":" + client->getNick() + "!" + client->getUser() + "@localhost TOPIC #" + channelPARAM + " :" + newTopicPARAM + "\r\n";
         send(client->getFd(), RPL.c_str(), RPL.size(), 0);
     }
