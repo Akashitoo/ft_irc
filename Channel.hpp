@@ -12,10 +12,14 @@ class Channel
 
 		std::string				_name;
 		std::string				_topic;
+		std::string				_passKey;
 		std::vector<Client*>	_users;
 		std::vector<Client*>	_operators;
 
-		
+		bool _inviteOnly;
+		bool _topicChangeOpOnly;
+
+		int _userLimit;
 
 	public :
 
@@ -36,11 +40,22 @@ class Channel
 
 		void setTopic(std::string topic);
 
+		std::string getName(); 
+		std::string getTopic(); 
+		std::string getPassKey(); 
+
+		bool getInviteOnly();
+		bool getTopicChOnly();
+
+		int getUserLimit();
+
 		std::vector<Client*>		getUsers();
 		std::vector<Client*>		getOperators();
 
-		std::string getName(); 
-		std::string getTopic(); 
+		void setPassKey(const std::string &passKey);
+		void setInviteOnly(const bool &inviteOnly);
+		void setTopicChOnly(const bool &topicChangeChOnly);
+		void setUserLimit(int userLimit);
 
 		void printUsers(Client* client);
 };

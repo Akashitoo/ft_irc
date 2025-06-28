@@ -88,6 +88,46 @@ std::string Channel::getTopic()
 	return _topic;
 }
 
+std::string Channel::getPassKey()
+{
+	return _passKey;
+}
+
+bool Channel::getInviteOnly()
+{
+	return _inviteOnly;
+}
+
+bool Channel::getTopicChOnly()
+{
+	return _topicChangeOpOnly;
+}
+
+int Channel::getUserLimit()
+{
+	return _userLimit;
+}
+
+void Channel::setPassKey(const std::string &passKey)
+{
+	_passKey = passKey;
+}
+
+void Channel::setInviteOnly(const bool &inviteOnly)
+{
+	_inviteOnly = inviteOnly;
+}
+
+void Channel::setTopicChOnly(const bool &topicChangeChOnly)
+{
+	_topicChangeOpOnly = topicChangeChOnly;
+}
+
+void Channel::setUserLimit(int userLimit)
+{
+	_userLimit = userLimit;
+}
+
 void Channel::printUsers(Client* client)
 {
     std::string channel = this->_name;
