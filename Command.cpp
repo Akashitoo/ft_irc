@@ -137,7 +137,7 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 		Channel* chan = this->findChannel(channel);
 		if (!chan)
             return;
-        if (!chan->isUser(client))
+        if (!chan->isOnChannel(client))
         {
             std::string errorReply = ERR_CANNOTSENDTOCHAN + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
             send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
@@ -378,7 +378,7 @@ void Server::handleInvite(Client *client, const std::string &line)
         return;
     }
     //gere si le client qui invite existe
-    if(!chan->isUser(client))
+    if(!chan->isOnChannel(client))
     {
         std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel + " :You're not on that channel\r\n";
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
@@ -400,7 +400,7 @@ void Server::handleInvite(Client *client, const std::string &line)
 
     // Utiliser le premier client trouvé et verif si deja dans le channel
     Client* targetClient = targets_client[0];
-    if (chan->isUser(targetClient))
+    if (chan->isOnChannel(targetClient))
     {
         std::string errorReply = ERR_USERONCHANNEL + client->getNick() + " " + target + " " + channel + " :is already on channel\r\n";
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
@@ -431,4 +431,46 @@ void Server::handleQuit(Client* client, const std::string &line)
         (*it)->sendToUsersCommand(cmd);
     }
 
+}
+
+void Server::handlePart(Client *client, const std::string &line)
+{
+    size_t pos = line.find('#');
+    if(pos == std::string::npos)
+        return ;
+    std::string channel_part = line.substr(pos + 1);
+    Channel *chan = this->findChannel(channel_part);
+    
+    if(!chan)
+    {
+        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel_part + " :No such channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+
+    bool found = false;
+    std::vector<Client*> users = chan->getUsers();
+    for(size_t i = 0; i < users.size(); i++) {
+        if(users[i] == client) {
+            found = true;
+            break;
+        }
+    }
+    if(!found)
+    {
+        std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel_part + " :You're not on that channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+
+    std::string re;
+    size_t rpos = line.find(':', pos);
+    if(rpos != std::string::npos)
+        re = line.substr(rpos + 1);
+    else
+        re = client->getNick();
+
+    std::string msg = ":" + client->getNick() + "!" + client->getUser() + "@localhost PART #" + channel_part + " :" + re + "\r\n";
+    chan->sendToUsersCommand(msg);
+    chan->eraseUser(client);
 }

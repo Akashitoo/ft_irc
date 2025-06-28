@@ -76,6 +76,8 @@ void Server::handleCommand(Client *client, const std::string &line)
 		{ "KICK", &Server::handleKick },
 		{ "TOPIC", &Server::handleTopic },
 		{ "MODE", &Server::handleMode },
+		{ "INVITE", &Server::handleInvite },
+		{ "PART", &Server::handlePart },
 		{ "", NULL }
 	};
 	short i = -1; 
