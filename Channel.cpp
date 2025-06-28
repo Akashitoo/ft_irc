@@ -98,7 +98,7 @@ bool Channel::getInviteOnly()
 	return _inviteOnly;
 }
 
-bool Channel::getTopicChOnly()
+bool Channel::getTopicOpOnly()
 {
 	return _topicChangeOpOnly;
 }

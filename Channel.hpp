@@ -45,7 +45,7 @@ class Channel
 		std::string getPassKey(); 
 
 		bool getInviteOnly();
-		bool getTopicChOnly();
+		bool getTopicOpOnly();
 
 		int getUserLimit();
 
