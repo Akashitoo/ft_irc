@@ -262,10 +262,60 @@ void Server::handlePart(Client *client, const std::string &line)
     chan->eraseUser(client);
 }
 
-// void Server::handleInvite(Client *client, const std::string &line)
-// {
+void Server::handleInvite(Client *client, const std::string &line)
+{
+    std::istringstream iss(line.substr(7));
+    std::string target;
+    std::string channel;
+    iss >> target >> channel;
 
-// }
+    if(channel[0] == '#')
+        channel = channel.substr(1);
+    //gere si le chan existe
+    Channel *chan = findChannel(channel);
+    if (!chan)
+    {
+        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel + " :No such channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+    //gere si le client qui invite existe
+    if(!chan->isUser(client))
+    {
+        std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel + " :You're not on that channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+     std::vector<Client*> targets_client;
+    for (size_t i = 0; i < _clients.size(); i++)
+    {
+        if (_clients[i]->getNick() == target)
+            targets_client.push_back(_clients[i]);
+    }
+    //client existe pas
+    if (targets_client.empty())
+    {
+        std::string errorReply = ERR_NOSUCHNICK + client->getNick() + " " + target + " :No such nick\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+
+    // Utiliser le premier client trouvé et verif si deja dans le channel
+    Client* targetClient = targets_client[0];
+    if (chan->isUser(targetClient))
+    {
+        std::string errorReply = ERR_USERONCHANNEL + client->getNick() + " " + target + " " + channel + " :is already on channel\r\n";
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return;
+    }
+
+    std::string inviteMsg = ":" + client->getNick() + "!" + client->getUser() + "@localhost INVITE " + target + " :#" + channel + "\r\n";
+    send(targetClient->getFd(), inviteMsg.c_str(), inviteMsg.size(), 0);
+
+    std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
+    send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
+
+}
 
 
 void Server::handleQuit(Client* client, const std::string &line)
