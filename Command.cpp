@@ -310,13 +310,13 @@ void Server::handleInvite(Client *client, const std::string &line)
     }
 
     std::string inviteMsg = ":" + client->getNick() + "!" + client->getUser() + "@localhost INVITE " + target + " :#" + channel + "\r\n";
+    std::cout << "INVITE sent to fd " << targetClient->getFd() << ": " << inviteMsg << std::endl;
     send(targetClient->getFd(), inviteMsg.c_str(), inviteMsg.size(), 0);
 
     std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
     send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
 
 }
-
 
 void Server::handleQuit(Client* client, const std::string &line)
 {
