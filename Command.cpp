@@ -536,7 +536,7 @@ void Server::handleInvite(Client *client, const std::string &line)
 
     std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
     send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
-
+    chan->addUser(targetClient);
 }
 
 
