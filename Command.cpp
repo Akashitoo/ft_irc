@@ -1,17 +1,41 @@
 # include "Server.hpp"
 
+std::vector<std::string> split(const std::string& str, char delimiter) 
+{
+    std::vector<std::string> tokens;
+    std::istringstream iss(str);
+    std::string token;
+    
+    while (std::getline(iss, token, delimiter))
+        if (!token.empty())
+            tokens.push_back(token);
+    return tokens;
+}
+
 void Server::handlePass(Client *client, const std::string &line)
 {
     std::istringstream iss(line.substr(PASS_DELIM));
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        // check if raw command is TOPIC without params with "/topic" in irssi
+        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " PASS :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
 	std::string pass;
 	iss >> pass;
+    // apparement ce rpl 430 est pas commun et pas dans le rfc si j ai bien compris
+	// if (pass.empty())
+	// {
+	// 	std::string error_msg = ":localhost 430 :No password given\r\n";
+    //     send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
+    //     return;
+	// }
 
-	if (pass.empty())
-	{
-		std::string error_msg = ":localhost 430 :No password given\r\n";
-        send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
-        return;
-	}
+    if (client->getVerif() && !client->getNick().empty() && !client->getUser().empty())
+    {
+		std::string errorRPL = ERR_ALREADYREGISTRED + client->getNick() + " :You may not reregister\r\n"; 
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
 
 	client->setPass(pass);
 
@@ -19,8 +43,8 @@ void Server::handlePass(Client *client, const std::string &line)
 		client->setVerif(true);
 	else
 	{
-		std::string error = "ERROR - Password incorrect\r\n";
-		send(client->getFd(), error.c_str(), error.size(), 0);
+		std::string errorRPL = ERR_PASSWDMISMATCH + client->getNick() + " :Password incorrect";
+		send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
 		// close(client.getFd());
 		client->setVerif(false);
 	}
@@ -28,36 +52,30 @@ void Server::handlePass(Client *client, const std::string &line)
 
 void Server::handleNick(Client *client, const std::string &line)
 {
-	 if (!client->getVerif())
+    // ERROR RPLS 431 432 433 462
+	if (!client->getVerif())
 	{
+        // dont know if need this one
 		std::string error_msg = ":localhost 430 : NO VALID\r\n";
         send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
         return;
 	}
     std::istringstream iss(line.substr(NICK_DELIM));
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = ":localhost 431 * :Not nickname given\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
     std::string nick;
     iss >> nick;
-    if (nick.empty())
-    {
-        std::string error_msg = ":localhost 431 :No nickname given\r\n";
-        send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
-        return;
-    }
-    bool valid = true;
     for (size_t i = 0; i < nick.length(); i++)
     {
         char c = nick[i];
         if (!isalnum(c) && c != '-' && c != '_' && c != '[' && c != ']' && c != '\\' && c != '`' && c != '^' && c != '{' && c != '}')
         {
-            valid = false;
-            break;
+            std::string error_msg = ":localhost 432 * " + nick + " :Erroneous nickname\r\n";
+            send(client->getFd(), error_msg.c_str(), error_msg.size(), 0); return;
         }
-    }
-    if (!valid)
-    {
-        std::string error_msg = ":localhost 432 " + nick + " :Erroneous nickname\r\n";
-        send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
-        return;
     }
     for (size_t i = 0; i < _clients.size(); i++)
     {
@@ -109,22 +127,80 @@ void Server::handleUser(Client *client, const std::string &line)
     checkRegistration(client);
 }
 
+
 void Server::handleJoin(Client *client, const std::string &line)
 {
-	std::string channel = line.substr(line.find("#") + 1);
-	Channel* chan = this->findChannel(channel);
-	if (!chan)
-	{
-		Channel* tmp = new Channel(channel);
-		this->_channels.push_back(tmp);
-        chan = this->_channels.back();
-		chan->addOperator(client);
-	}
-    client->joinChannel(chan);
-	chan->addUser(client);
-	chan->sendToUsersNewUser(client);
-    chan->printUsers(client);
-    chan->printTopic(client);
+
+    std::string cmd, channels, passwords;
+    std::istringstream iss(line);
+    iss >> cmd >> channels >> passwords;
+
+    std::vector<std::string> chan_list = split(channels, ',');
+    std::vector<std::string> pass_list = split(passwords, ',');
+
+    for (size_t i=0; i < chan_list.size(); i++)
+    {
+        std::string channel = &chan_list[i][1];
+
+        Channel* chan = this->findChannel(channel);
+        if (!chan)
+        {
+            Channel* tmp = new Channel(channel);
+            this->_channels.push_back(tmp);
+            chan = this->_channels.back();
+            chan->addOperator(client);
+        }
+        if (!chan->getModes().empty())
+        {
+            if (chan->getModes().find('k') != std::string::npos)
+            {
+                if (i >= pass_list.size())
+                {
+                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+                std::string password = pass_list[i];
+                if (password != chan->getPassKey())
+                {
+                    std::cout << password << " : " << chan->getPassKey() << "\n"; 
+                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+            }
+            if (chan->getModes().find('i') != std::string::npos)
+            {
+                if (!chan->isInvited(client))
+                {
+                    std::cout << "sdfsdfsdfds\n";
+                    std::string errorReply = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+            }
+            if (chan->getModes().find('l') != std::string::npos)
+            {
+                if (chan->getUserLimit() == (int)chan->getUsers().size())
+                {
+                    std::string errorReply = std::string(ERR_CHANNELISFULL) + client->getNick() + " #" + channel + " :Channel is full\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+            }
+        }
+        if (chan->isOnChannel(client))
+        {
+            std::string errorReply = std::string(ERR_USERONCHANNEL) + client->getNick() + " #" + channel + " :User is already on channel\r\n";
+            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            return;
+        }
+        client->joinChannel(chan);
+        chan->addUser(client);
+        chan->sendToUsersNewUser(client);
+        chan->printUsers(client);
+        chan->printTopic(client);
+    }
 }
 
 void Server::handlePrivateMessage(Client *client, const std::string &line)
@@ -228,13 +304,13 @@ void Server::handleTopic(Client* client, const std::string &line)
     // |TOPIC #channelPARAM :<newTopicPARAM>|
     // |TOPIC #channelPARAM|
 
-    if (line == "TOPIC ") 
+    std::istringstream iss(line.substr(TOPIC_DELIM));
+    if (iss.rdbuf()->in_avail() == 0) 
     {
         // check if raw command is TOPIC without params with "/topic" in irssi
         std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " TOPIC :Not enough parameters\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
-    std::istringstream iss(line.substr(TOPIC_DELIM));
     std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); }// removing '#' in front of channel if he s here
     Channel *tempChan = findChannel(channelPARAM);
     if (tempChan == NULL)   
@@ -249,8 +325,9 @@ void Server::handleTopic(Client* client, const std::string &line)
         std::string errorRPL = ERR_NOTONCHANNEL + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
-    if (iss.eof())
+    if (iss.rdbuf()->in_avail() == 0)
     {
+        std::cout << "SALAM\n";
         // view topics
         std::string RPL;
         if (tempChan->getTopic().empty())
@@ -284,11 +361,15 @@ void Server::handleMode(Client *client, const std::string &line)
     // |MODE <#channelPARAM> +l <limit>| or - manage channel user limit
 
     std::istringstream iss(line.substr(MODE_DELIM));
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
     std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); } else return;// removing '#' in front of channel if he s here
     Channel *tempChan = findChannel(channelPARAM);
-    if (iss.eof())
+    if (iss.rdbuf()->in_avail() == 0) 
     {
-        // check if only RAW COMMAND MODE is sent alone without any params
         std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
@@ -304,7 +385,7 @@ void Server::handleMode(Client *client, const std::string &line)
         std::string errorRPL = ERR_NOTONCHANNEL + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
-    if (iss.eof())
+    if (iss.rdbuf()->in_avail() == 0)
     {
         std::string RPL = RPL_CHANNELMODEIS + client->getNick() + " #" + channelPARAM + " " + tempChan->getModes() + "\r\n";
         send(client->getFd(), RPL.c_str(), RPL.size(), 0); return;
@@ -322,31 +403,21 @@ void Server::handleMode(Client *client, const std::string &line)
         {
             case I:
                 if (flagPARAM[0] == '+')
-                {
                     tempChan->setInviteOnly(true);
-                    tempChan->setModes(ADD, flagPARAM[i]);
-                }
                 else
-                {
                     tempChan->setInviteOnly(false);
-                    tempChan->setModes(REMOVE, flagPARAM[i]);
-                }
+                tempChan->setModes(flagPARAM[0] == '+', flagPARAM[i]);
                 break;
             case T: 
                 if (flagPARAM[0] == '+')
-                {
                     tempChan->setTopicChOnly(true);
-                    tempChan->setModes(ADD, flagPARAM[i]);
-                }
                 else
-                {
                     tempChan->setTopicChOnly(false);
-                    tempChan->setModes(REMOVE, flagPARAM[i]);
-                }
+                tempChan->setModes(flagPARAM[0] == '+', flagPARAM[i]);
                 break;
             case K:
             {
-                if (iss.eof())
+                if (iss.rdbuf()->in_avail() == 0)
                 {
                     // check if no params left
                     std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
@@ -360,20 +431,15 @@ void Server::handleMode(Client *client, const std::string &line)
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
                 if (flagPARAM[0] == '+')
-                {
                     tempChan->setPassKey(newPassKey); 
-                    tempChan->setModes(ADD, flagPARAM[i]);
-                }
                 else
-                {
                     tempChan->setPassKey("");
-                    tempChan->setModes(REMOVE, flagPARAM[i]);
-                }
+                tempChan->setModes(flagPARAM[0] == '+', flagPARAM[i]);
                 break;
             }
             case O: 
             {
-                if (iss.eof())
+                if (iss.rdbuf()->in_avail() == 0)
                 {
                     // check if no params left
                     std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
@@ -392,37 +458,26 @@ void Server::handleMode(Client *client, const std::string &line)
                     std::string errorRPL = ERR_USERNOTINCHANNEL + client->getNick() + " " + nickToUpd + " #" + channelPARAM + " :User not in channel\r\n";
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
-                if (flagPARAM[0] == '+')
-                {
-                    tempChan->addOperator(tempCli);
-                    tempChan->setModes(ADD, flagPARAM[i]);
-                }
-                else
-                {
-                    tempChan->eraseOperator(tempCli);
-                    tempChan->setModes(REMOVE, flagPARAM[i]);
-                }
+                tempChan->addOperator(tempCli);
+                tempChan->setModes(flagPARAM[0] == '+', flagPARAM[i]);
                 break;
             }
             case L: 
             {
-                if (iss.eof())
-                {
-                    // check if no params left
-                    std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
-                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
-                }
                 int newUserLimit; iss >> newUserLimit; 
                 if (flagPARAM[0] == '+')
                 {
+                    if (iss.rdbuf()->in_avail() == 0)
+                    {
+                        // check if no params left
+                        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
+                        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+                    }
                     tempChan->setUserLimit(newUserLimit);
-                    tempChan->setModes(ADD, flagPARAM[i]);
                 }
                 else
-                {
                     tempChan->setUserLimit(NO_USER_LIMIT); // vu que la userlimit peut pas etre negative alors on la met a -1 pour indiquer l absence de limit
-                    tempChan->setModes(REMOVE, flagPARAM[i]);
-                }
+                tempChan->setModes(flagPARAM[0] == '+', flagPARAM[i]);
                 break;
             }
         }
@@ -436,7 +491,7 @@ void Server::handleInvite(Client *client, const std::string &line)
     std::istringstream iss(line.substr(7));
     std::string target;
     std::string channel;
-    iss >> channel >> target;
+    iss >> target >> channel;
 
     if(channel[0] == '#')
         channel = channel.substr(1);
@@ -445,15 +500,13 @@ void Server::handleInvite(Client *client, const std::string &line)
     if (!chan)
     {
         std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel + " :No such channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
-        return;
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
     }
     //gere si le client qui invite existe
     if(!chan->isOnChannel(client))
     {
         std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel + " :You're not on that channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
-        return;
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
     }
      std::vector<Client*> targets_client;
     for (size_t i = 0; i < _clients.size(); i++)
@@ -501,6 +554,8 @@ void Server::handleQuit(Client* client, const std::string &line)
         (*it)->eraseUser(client);
         (*it)->sendToUsersCommand(cmd);
     }
+    eraseUserServer(client);
+    close(client->getFd());
 
 }
 

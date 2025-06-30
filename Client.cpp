@@ -2,7 +2,7 @@
 
 //mettre un args dans le construc parceque besoin pour le server 
 Client::Client(int fd) : _fd(fd), _pass(""), _nick(""), _user(""),
-_buffer(""), _verif(false) {
+_buffer(""), _verif(false), _connected(false) {
 }
 
 Client::~Client() {
@@ -15,7 +15,8 @@ void Client::setUser(const std::string &user)
       _user = user;
 }
 
-void Client::setNick(const std::string& nick) {
+void Client::setNick(const std::string& nick) 
+{
     _nick = nick;
 }
 
@@ -26,8 +27,8 @@ void Client::setPass(const std::string &pass)
 void Client::setVerif(bool value) {
     _verif = value;
 }
-void Client::setDisconnected(bool value) {
-    _disconnected = value;
+void Client::setConnected(bool value) {
+    _connected = value;
 }
 //getter
 std::string Client::getPass() const{
@@ -56,8 +57,8 @@ bool Client::getVerif() const {
     return _verif;
 }
 
-bool Client::getDisconnected() const {
-    return _disconnected;
+bool Client::getConnected() const {
+    return _connected;
 }
 //il ajt chaque information du client dans un buffer
 void Client::appendToBuffer(const std::string& data) {

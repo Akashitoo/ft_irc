@@ -139,7 +139,10 @@ void Channel::setUserLimit(int userLimit)
 {
 	_userLimit = userLimit;
 }
-
+bool Channel::isInvited(Client* user)
+{
+	return (std::find(this->_invited.begin(), this->_invited.end(), user) != this->_invited.end());
+}
 void Channel::setModes(bool changeType, char mode)
 {
 	if (changeType == ADD && _modes.find(mode) == std::string::npos)

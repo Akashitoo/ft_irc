@@ -17,13 +17,23 @@ struct pollfd create_pollfd(int sock)
 	nfd.revents = 0;
 	return (nfd);
 }
-
+void Server::eraseUserServer(Client* user)
+{
+	std::vector<Client*>::iterator it = std::find(this->_clients.begin(), this->_clients.end(), user);
+	if (it != this->_clients.end())
+        this->_clients.erase(it);
+}
 Server::Server(std::string password, int port): _password(password), _port(port){}
 
 Server::~Server(){}
 
 void Server::checkRegistration(Client *client)
 {
+	if (client->getConnected())
+	{
+		std::string errorRPL = ERR_ALREADYREGISTRED + client->getNick() + " :You're not channel operator\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+	}
     if (client->getVerif() && !client->getNick().empty() && !client->getUser().empty())
     {
         std::string nick = client->getNick();
@@ -45,6 +55,8 @@ void Server::checkRegistration(Client *client)
         // RPL_MYINFO (004)
         std::string myinfo = RPL_MYINFO + nick + " ircserv\r\n";
         send(client->getFd(), myinfo.c_str(), myinfo.size(), 0);
+
+		client->setConnected(true);
     }
 }
 

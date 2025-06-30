@@ -37,8 +37,10 @@ class Server
 	
 
 	void checkRegistration(Client *client);
+	void eraseUserServer(Client* user);
 	Channel* findChannel(std::string name);
 	Client *findClient(const std::string& nick);
+
 
 	public : 
 

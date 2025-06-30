@@ -16,6 +16,7 @@ class Channel
 		std::string				_modes;
 		std::vector<Client*>	_users;
 		std::vector<Client*>	_operators;
+		std::vector<Client*> _invited;
 
 		bool _inviteOnly;
 		bool _topicChangeOpOnly;
@@ -58,6 +59,8 @@ class Channel
 		void setTopicChOnly(const bool &topicChangeChOnly);
 		void setUserLimit(int userLimit);
 		void setModes(bool changeType, char mode);
+		bool isInvited(Client* user);
+
 
 		void printUsers(Client* client);
 		void printTopic(Client* client);

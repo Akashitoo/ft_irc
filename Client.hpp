@@ -16,7 +16,7 @@ class Client {
 	// std::string _hostname;
 	std::string _buffer;
     bool _verif;
-	bool _disconnected;
+	bool _connected;
     std::vector<Channel*> _joinedChannels;
 
     public :
@@ -35,14 +35,14 @@ class Client {
     std::string getUser() const;
 	int getFd() const;
     bool getVerif() const;
-    bool getDisconnected() const;
+    bool getConnected() const;
     //setter
     void setPass(const std::string& pass);
     void setUser(const std::string& user);
     void setNick(const std::string& nick);
     // void setJoin(const std::string& join);
     void setVerif(bool value);
-    void setDisconnected(bool value);
+    void setConnected(bool value);
     void joinChannel(Channel* channel);
     
     std::vector<Channel *> getJoinedChannels();
