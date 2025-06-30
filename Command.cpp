@@ -1,5 +1,21 @@
 # include "Server.hpp"
 
+std::vector<std::string> split(const std::string& str, char delimiter) 
+{
+    std::vector<std::string> tokens;
+    std::istringstream iss(str);
+    std::string token;
+    
+    while (std::getline(iss, token, delimiter))
+    {
+        if (!token.empty())
+        {
+            tokens.push_back(token);
+        }
+    }
+    return tokens;
+}
+
 void Server::handlePass(Client *client, const std::string &line)
 {
     std::istringstream iss(line.substr(PASS_DELIM));
@@ -111,20 +127,70 @@ void Server::handleUser(Client *client, const std::string &line)
 
 void Server::handleJoin(Client *client, const std::string &line)
 {
-	std::string channel = line.substr(line.find("#") + 1);
-	Channel* chan = this->findChannel(channel);
-	if (!chan)
-	{
-		Channel* tmp = new Channel(channel);
-		this->_channels.push_back(tmp);
-        chan = this->_channels.back();
-		chan->addOperator(client);
-	}
-    client->joinChannel(chan);
-	chan->addUser(client);
-	chan->sendToUsersNewUser(client);
-    chan->printUsers(client);
-    chan->printTopic(client);
+
+    std::string cmd, channels, passwords;
+    std::istringstream iss(line);
+    iss >> cmd >> channels >> passwords;
+
+    std::vector<std::string> chan_list = split(channels, ',');
+    std::vector<std::string> pass_list = split(passwords, ',');
+
+    for (size_t i=0; i < chan_list.size(); i++)
+    {
+        std::string channel = &chan_list[i][1];
+
+        Channel* chan = this->findChannel(channel);
+        if (!chan)
+        {
+            Channel* tmp = new Channel(channel);
+            this->_channels.push_back(tmp);
+            chan = this->_channels.back();
+            chan->addOperator(client);
+        }
+        if (!chan->getModes().empty())
+        {
+            if (chan->getModes().find('k') != std::string::npos)
+            {
+                if (i >= pass_list.size())
+                {
+                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+                std::string password = pass_list[i];
+                if (password != chan->getPassKey())
+                {
+                    std::cout << password << " : " << chan->getPassKey() << "\n"; 
+                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+            }
+            if (chan->getModes().find('i') != std::string::npos)
+            {
+                if (!chan->isInvited(client))
+                {
+                    std::string errorReply = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+            }
+            if (chan->getModes().find('l') != std::string::npos)
+            {
+                if (chan->getUserLimit() == (int)chan->getUsers().size())
+                {
+                    std::string errorReply = std::string(ERR_CHANNELISFULL) + client->getNick() + " #" + channel + " :Channel is full\r\n";
+                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    return;
+                }
+            }
+        }
+        client->joinChannel(chan);
+        chan->addUser(client);
+        chan->sendToUsersNewUser(client);
+        chan->printUsers(client);
+        chan->printTopic(client);
+    }
 }
 
 void Server::handlePrivateMessage(Client *client, const std::string &line)
@@ -162,7 +228,6 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
 	}
 }
-
 
 void Server::handlePing(Client *client, const std::string &line)
 {
@@ -483,9 +548,8 @@ void Server::handleInvite(Client *client, const std::string &line)
 
     std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
     send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
-
+    chan->addInvited(client);
 }
-
 
 void Server::handleQuit(Client* client, const std::string &line)
 {
@@ -501,7 +565,6 @@ void Server::handleQuit(Client* client, const std::string &line)
         (*it)->eraseUser(client);
         (*it)->sendToUsersCommand(cmd);
     }
-
 }
 
 void Server::handlePart(Client *client, const std::string &line)

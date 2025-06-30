@@ -16,6 +16,7 @@ class Channel
 		std::string				_modes;
 		std::vector<Client*>	_users;
 		std::vector<Client*>	_operators;
+		std::vector<Client*> _invited;
 
 		bool _inviteOnly;
 		bool _topicChangeOpOnly;
@@ -27,19 +28,20 @@ class Channel
 		Channel(std::string name);
 		~Channel();
 
-		void 							addUser(Client* user);
-		void 							addOperator(Client* user);
-		void 							eraseUser(Client* user);
-		void 							eraseOperator(Client* user);
+		void 			addUser(Client* user);
+		void 			addOperator(Client* user);
+		void			addInvited(Client* user);
 
-		void 							sendToUsersMessage(std::string message, Client* sender);
-		void 							sendToUsersNewUser(Client* sender);
-		void 							sendToUsersCommand(std::string cmd);
+		void 			eraseUser(Client* user);
+		void 			eraseOperator(Client* user);
 
-		bool 							isOperator(Client* user);
-		bool 							isOnChannel(Client* user);
-
-		void setTopic(std::string topic);
+		void 			sendToUsersMessage(std::string message, Client* sender);
+		void 			sendToUsersNewUser(Client* sender);
+		void 			sendToUsersCommand(std::string cmd);
+		
+		bool 			isOperator(Client* user);
+		bool 			isOnChannel(Client* user);
+		bool			isInvited(Client* user);
 
 		std::string getName(); 
 		std::string getTopic(); 
@@ -52,7 +54,9 @@ class Channel
 
 		std::vector<Client*>		getUsers();
 		std::vector<Client*>		getOperators();
+		std::vector<Client*>		getInvited();
 
+		void setTopic(std::string topic);
 		void setPassKey(const std::string &passKey);
 		void setInviteOnly(const bool &inviteOnly);
 		void setTopicChOnly(const bool &topicChangeChOnly);

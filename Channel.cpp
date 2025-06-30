@@ -20,6 +20,11 @@ void Channel::addOperator(Client* user)
 	this->_operators.push_back(user);
 }
 
+void Channel::addInvited(Client* user)
+{
+	this->_invited.push_back(user);
+}
+
 void Channel::eraseUser(Client* user)
 {
 	std::vector<Client*>::iterator it = std::find(this->_users.begin(), this->_users.end(), user);
@@ -80,7 +85,17 @@ bool Channel::isOnChannel(Client* user)
 	return (std::find(this->_users.begin(), this->_users.end(), user) != this->_users.end());
 }
 
+bool Channel::isInvited(Client* user)
+{
+	return (std::find(this->_invited.begin(), this->_invited.end(), user) != this->_invited.end());
+}
+
 std::vector<Client*> Channel::getUsers()
+{
+	return (this->_users);
+}
+
+std::vector<Client*> Channel::getInvited()
 {
 	return (this->_users);
 }
