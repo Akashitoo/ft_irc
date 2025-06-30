@@ -170,6 +170,7 @@ void Server::handleJoin(Client *client, const std::string &line)
             {
                 if (!chan->isInvited(client))
                 {
+                    std::cout << "sdfsdfsdfds\n";
                     std::string errorReply = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
                     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
                     return;
@@ -184,6 +185,12 @@ void Server::handleJoin(Client *client, const std::string &line)
                     return;
                 }
             }
+        }
+        if (chan->isOnChannel(client))
+        {
+            std::string errorReply = std::string(ERR_USERONCHANNEL) + client->getNick() + " #" + channel + " :User is already on channel\r\n";
+            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            return;
         }
         client->joinChannel(chan);
         chan->addUser(client);
@@ -501,7 +508,7 @@ void Server::handleInvite(Client *client, const std::string &line)
     std::istringstream iss(line.substr(7));
     std::string target;
     std::string channel;
-    iss >> channel >> target;
+    iss >> target >> channel;
 
     if(channel[0] == '#')
         channel = channel.substr(1);
@@ -548,7 +555,7 @@ void Server::handleInvite(Client *client, const std::string &line)
 
     std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
     send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
-    chan->addInvited(client);
+    chan->addInvited(targetClient);
 }
 
 void Server::handleQuit(Client* client, const std::string &line)

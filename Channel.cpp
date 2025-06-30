@@ -97,7 +97,7 @@ std::vector<Client*> Channel::getUsers()
 
 std::vector<Client*> Channel::getInvited()
 {
-	return (this->_users);
+	return (this->_invited);
 }
 
 void Channel::setTopic(std::string topic)
