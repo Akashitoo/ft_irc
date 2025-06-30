@@ -25,6 +25,8 @@
 
 //Utils defines
 #define NO_USER_LIMIT -1
+#define REMOVE false
+#define ADD true
 
 //Raw commands delimiters
 #define TOPIC_DELIM 5

@@ -1,6 +1,6 @@
 #include "Channel.hpp"
 
-Channel::Channel(std::string name) : _name(name){}
+Channel::Channel(std::string name) : _name(name), _modes("+") {}
 
 Channel::~Channel(){}
 
@@ -25,6 +25,13 @@ void Channel::eraseUser(Client* user)
 	std::vector<Client*>::iterator it = std::find(this->_users.begin(), this->_users.end(), user);
 	if (it != this->_users.end())
         this->_users.erase(it);
+}
+
+void Channel::eraseOperator(Client* user)
+{
+	std::vector<Client*>::iterator it = std::find(this->_operators.begin(), this->_operators.end(), user);
+	if (it != this->_operators.end())
+        this->_operators.erase(it);
 }
 
 void Channel::sendToUsersNewUser(Client* sender)
@@ -108,6 +115,11 @@ int Channel::getUserLimit()
 	return _userLimit;
 }
 
+std::string Channel::getModes()
+{
+	return _modes;
+}
+
 void Channel::setPassKey(const std::string &passKey)
 {
 	_passKey = passKey;
@@ -126,6 +138,14 @@ void Channel::setTopicChOnly(const bool &topicChangeChOnly)
 void Channel::setUserLimit(int userLimit)
 {
 	_userLimit = userLimit;
+}
+
+void Channel::setModes(bool changeType, char mode)
+{
+	if (changeType == ADD && _modes.find(mode) == std::string::npos)
+		_modes += mode;
+	else if (changeType == REMOVE && _modes.find(mode) != std::string::npos)
+		_modes.erase(_modes.find(mode));
 }
 
 void Channel::printUsers(Client* client)

@@ -60,6 +60,15 @@ Channel* Server::findChannel(std::string name)
 	return (NULL);
 }
 
+Client *Server::findClient(const std::string& nick)
+{
+	std::vector<Client *>::iterator end = _clients.end();
+	for (std::vector<Client *>::iterator it = _clients.begin(); it != end; it++)
+		if ((*it)->getNick() == nick)
+			return *it;
+	return (NULL);
+}
+
 void Server::handleCommand(Client *client, const std::string &line)
 {
 	std::istringstream iss(line);
@@ -122,7 +131,9 @@ void Server::read_client()
 		if (this->_fds[i].revents & POLLIN)
 		{
 			if (i == 0)
+			{
 				add_client();
+			}
 			else
 			{
 				char receipt[4096];

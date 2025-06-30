@@ -13,6 +13,7 @@ class Channel
 		std::string				_name;
 		std::string				_topic;
 		std::string				_passKey;
+		std::string				_modes;
 		std::vector<Client*>	_users;
 		std::vector<Client*>	_operators;
 
@@ -29,7 +30,7 @@ class Channel
 		void 							addUser(Client* user);
 		void 							addOperator(Client* user);
 		void 							eraseUser(Client* user);
-		void 							erasedOperator(Client* user);
+		void 							eraseOperator(Client* user);
 
 		void 							sendToUsersMessage(std::string message, Client* sender);
 		void 							sendToUsersNewUser(Client* sender);
@@ -43,10 +44,10 @@ class Channel
 		std::string getName(); 
 		std::string getTopic(); 
 		std::string getPassKey(); 
+		std::string getModes(); 
 
 		bool getInviteOnly();
 		bool getTopicOpOnly();
-
 		int getUserLimit();
 
 		std::vector<Client*>		getUsers();
@@ -56,6 +57,7 @@ class Channel
 		void setInviteOnly(const bool &inviteOnly);
 		void setTopicChOnly(const bool &topicChangeChOnly);
 		void setUserLimit(int userLimit);
+		void setModes(bool changeType, char mode);
 
 		void printUsers(Client* client);
 		void printTopic(Client* client);

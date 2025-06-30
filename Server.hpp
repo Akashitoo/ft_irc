@@ -38,6 +38,7 @@ class Server
 
 	void checkRegistration(Client *client);
 	Channel* findChannel(std::string name);
+	Client *findClient(const std::string& nick);
 
 	public : 
 
