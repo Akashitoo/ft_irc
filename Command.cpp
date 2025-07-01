@@ -542,7 +542,18 @@ void Server::handleInvite(Client *client, const std::string &line)
     std::istringstream iss(line.substr(7));
     std::string target;
     std::string channel;
-    iss >> target >> channel;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " INVITE :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    iss >> target;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " INVITE :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    iss >> channel;
 
     if(channel[0] == '#')
         channel = channel.substr(1);
@@ -620,6 +631,12 @@ void Server::handleQuit(Client* client, const std::string &line)
 
 void Server::handlePart(Client *client, const std::string &line)
 {
+    std::istringstream iss(line.substr(PART_DELIM));
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " PART :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
     size_t pos = line.find('#');
     if(pos == std::string::npos)
         return ;

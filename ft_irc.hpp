@@ -38,6 +38,7 @@
 #define PING_DELIM 4
 #define MODE_DELIM 4
 #define PRIVMSG_DELIM 7
+#define PART_DELIM 4
 
 //MODE RAW flags
 #define I 105
