@@ -159,16 +159,16 @@ void Server::handleJoin(Client *client, const std::string &line)
             {
                 if (i >= pass_list.size())
                 {
-                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    std::string errorRPL = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
                 std::string password = pass_list[i];
                 if (password != chan->getPassKey())
                 {
                     std::cout << password << " : " << chan->getPassKey() << "\n"; 
-                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    std::string errorRPL = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
             }
@@ -177,8 +177,8 @@ void Server::handleJoin(Client *client, const std::string &line)
                 if (!chan->isInvited(client))
                 {
                     // std::cout << "sdfsdfsdfds\n";
-                    std::string errorReply = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    std::string errorRPL = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
             }
@@ -186,16 +186,16 @@ void Server::handleJoin(Client *client, const std::string &line)
             {
                 if (chan->getUserLimit() == (int)chan->getUsers().size())
                 {
-                    std::string errorReply = std::string(ERR_CHANNELISFULL) + client->getNick() + " #" + channel + " :Channel is full\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    std::string errorRPL = std::string(ERR_CHANNELISFULL) + client->getNick() + " #" + channel + " :Channel is full\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
             }
         }
         if (chan->isOnChannel(client))
         {
-            std::string errorReply = std::string(ERR_USERONCHANNEL) + client->getNick() + " #" + channel + " :User is already on channel\r\n";
-            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            std::string errorRPL = std::string(ERR_USERONCHANNEL) + client->getNick() + " #" + channel + " :User is already on channel\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
             return;
         }
         client->joinChannel(chan);
@@ -221,15 +221,15 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
         }
         if (!chan->isOnChannel(client))
         {
-            std::string errorReply = std::string(ERR_CANNOTSENDTOCHAN) + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
-            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            std::string errorRPL = std::string(ERR_CANNOTSENDTOCHAN) + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
             return;
         }
         std::size_t msg_pos = line.find(" :", dest);
         if(msg_pos == std::string::npos)
         {
-            std::string errorReply = std::string(ERR_NOTEXTTOSEND) + client->getNick() + " :No text to send\r\n";
-            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            std::string errorRPL = std::string(ERR_NOTEXTTOSEND) + client->getNick() + " :No text to send\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
             return;
         }
 		std::string msg = line.substr(line.find(" ", dest + 1) + 2);
@@ -252,8 +252,8 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 				send(_clients[i]->getFd(), cmd.c_str(), cmd.size(), 0);
 				return ;
 			}
-        std::string errorReply = std::string(ERR_NOSUCHNICK) + target + " :No such nick/channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOSUCHNICK) + target + " :No such nick/channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
 	}
 }
 
@@ -277,24 +277,38 @@ void Server::handleKick(Client *client, const std::string &line)
     std::string channel, nick, reason;
     Channel *chan;
 
-    iss >> channel >> nick;
-
+    iss >> channel;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " KICK :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    iss >> nick;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " KICK :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
     reason = line.substr(line.find(" :") + 2);
     channel = channel.substr(1);
     chan = findChannel(channel);
     
     if (chan == NULL) 
     {
-        std::string errorReply = std::string(ERR_NOSUCHCHANNEL) + "#" + channel + " :No such channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
-        return;
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " #" + channel + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    if (!chan->isOnChannel(client))
+    {
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " #" + channel + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     if (!chan->isOperator(client))
     {
-        std::string errorReply = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
+        std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + client->getNick() + " #" + channel + " :You're not channel operator\r\n";
 
-        std::cout << errorReply << '\n';
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::cout << errorRPL << '\n';
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return ;
     }
     for (size_t i = 0; i < chan->getUsers().size(); i++)
@@ -311,8 +325,16 @@ void Server::handleKick(Client *client, const std::string &line)
             return ;
         }
     }
-    std::string errorReply = std::string(ERR_NOSUCHNICK) + "#"+ channel + " :No such nick\r\n";
-    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+    if (!findClient(nick))
+    {
+        std::string errorRPL = std::string(ERR_NOSUCHNICK) + client->getNick() + " #"+ channel + " :No such nick\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    if (!chan->isOnChannel(findClient(nick)))
+    {
+        std::string errorRPL = std::string(ERR_USERNOTINCHANNEL) + client->getNick() + " " + nick + " #"+ channel + " :They aren't on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
 }
 
 
@@ -528,22 +550,22 @@ void Server::handleInvite(Client *client, const std::string &line)
     Channel *chan = findChannel(channel);
     if (!chan)
     {
-        std::string errorReply = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " " + channel + " :No such channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " " + channel + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     if (!chan->isOperator(client))
     {
-        std::string errorReply = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
+        std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
 
-        std::cout << errorReply << '\n';
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::cout << errorRPL << '\n';
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return ;
     }
     //gere si le client qui invite existe
     if(!chan->isOnChannel(client))
     {
-        std::string errorReply = std::string(ERR_NOTONCHANNEL) + client->getNick() + " " + channel + " :You're not on that channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " " + channel + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
      std::vector<Client*> targets_client;
     for (size_t i = 0; i < _clients.size(); i++)
@@ -554,8 +576,8 @@ void Server::handleInvite(Client *client, const std::string &line)
     //client existe pas
     if (targets_client.empty())
     {
-        std::string errorReply = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + target + " :No such nick\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + target + " :No such nick\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
@@ -563,8 +585,8 @@ void Server::handleInvite(Client *client, const std::string &line)
     Client* targetClient = targets_client[0];
     if (chan->isOnChannel(targetClient))
     {
-        std::string errorReply = std::string(ERR_USERONCHANNEL) + client->getNick() + " " + target + " " + channel + " :is already on channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_USERONCHANNEL) + client->getNick() + " " + target + " " + channel + " :is already on channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
@@ -606,8 +628,8 @@ void Server::handlePart(Client *client, const std::string &line)
     
     if(!chan)
     {
-        std::string errorReply = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " " + channel_part + " :No such channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " " + channel_part + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
@@ -621,8 +643,8 @@ void Server::handlePart(Client *client, const std::string &line)
     }
     if(!found)
     {
-        std::string errorReply = std::string(ERR_NOTONCHANNEL) + client->getNick() + " " + channel_part + " :You're not on that channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " " + channel_part + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
