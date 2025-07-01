@@ -139,7 +139,7 @@ void Server::handleJoin(Client *client, const std::string &line)
     {
         if (chan_list[i][0] != '#')
         {
-            std::string errorRPL = std::string(ERR_BADMASK) + "* :You have not registered\r\n";
+            std::string errorRPL = std::string(ERR_BADMASK) + "* :Bad mask\r\n";
             send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
         }
 
@@ -612,8 +612,13 @@ void Server::handleInvite(Client *client, const std::string &line)
 
 void Server::handleQuit(Client* client, const std::string &line)
 {
-    std::string reason = line.substr(6);
-    std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost QUIT :" + reason + "\r\n";
+    std::istringstream iss(line.substr(QUIT_DELIM));
+    std::string reason; iss >> reason;
+    std::string cmd;
+    if (reason.empty())
+        cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost QUIT :" + client->getNick() + "\r\n";
+    else
+        cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost QUIT :" + reason + "\r\n";
 
     // Obtenir une copie locale des channels pour éviter les problèmes d'itérateurs
     std::vector<Channel*> joinedChannels = client->getJoinedChannels();
@@ -624,7 +629,16 @@ void Server::handleQuit(Client* client, const std::string &line)
         (*it)->sendToUsersCommand(cmd);
         (*it)->eraseUser(client);
     }
+    send(client->getFd(), cmd.c_str(), cmd.size(), 0);
+    for (size_t i=0; i < this->_fds.size(); i++)
+        if (this->_fds[i].fd == client->getFd())
+        {
+		    close(this->_fds[i].fd);
+            break;
+        }
     close(client->getFd());
+    eraseUserServer(client);
+    delete client;
 }
 
 void Server::handlePart(Client *client, const std::string &line)

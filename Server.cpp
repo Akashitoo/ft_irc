@@ -17,12 +17,6 @@ struct pollfd create_pollfd(int sock)
 	nfd.revents = 0;
 	return (nfd);
 }
-void Server::eraseUserServer(Client* user)
-{
-	std::vector<Client*>::iterator it = std::find(this->_clients.begin(), this->_clients.end(), user);
-	if (it != this->_clients.end())
-        this->_clients.erase(it);
-}
 
 Server::Server(std::string password, int port): _password(password), _port(port){}
 
@@ -156,6 +150,13 @@ void Server::handleClientInput(Client *client, const std::string &input, size_t 
 		}
 		handleCommand(client, line);
 	}
+}
+
+void Server::eraseUserServer(Client* user)
+{
+	std::vector<Client*>::iterator it = std::find(this->_clients.begin(), this->_clients.end(), user);
+	if (it != this->_clients.end())
+        this->_clients.erase(it);
 }
 
 void Server::read_client()
