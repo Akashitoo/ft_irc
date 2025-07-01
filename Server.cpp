@@ -5,7 +5,7 @@ int g_stop = 0;
 void ft_signal(int signum)
 {
     (void)signum;
-    std::cout << "Signal reçu, arret du serv" << std::endl;
+    std::cout << "Signal reçu ! Arrêt du serveur" << std::endl;
     g_stop = 1;
 }
 
