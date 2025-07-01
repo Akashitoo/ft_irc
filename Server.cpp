@@ -200,9 +200,29 @@ void Server::read_client()
 				{
 					close(this->_fds[i].fd);
 					this->_fds.erase(this->_fds.begin() + i);
+					for (size_t j = 0; j < this->_clients.size(); ++j)
+					{
+						if (this->_clients[j]->getFd() == this->_fds[i].fd)
+						{
+							this->eraseUserServer(this->_clients[j]);
+						}
+					}
 					--i;
 				}
 			}
+		}
+		else if (this->_fds[i].revents & POLLHUP)
+		{
+			close(this->_fds[i].fd);
+			this->_fds.erase(this->_fds.begin() + i);
+			for (size_t j = 0; j < this->_clients.size(); ++j)
+			{
+				if (this->_clients[j]->getFd() == this->_fds[i].fd)
+				{
+					this->eraseUserServer(this->_clients[j]);
+				}
+			}
+			--i;
 		}
 	}
 }

@@ -322,15 +322,8 @@ void Server::handleKick(Client *client, const std::string &line)
             chan->eraseUser(kicked);
             chan->eraseOperator(client);
             if (chan->getOperators().empty())
-            {
                 if (!chan->getUsers().empty())
                     chan->addOperator(chan->getUsers()[0]);
-                else
-                {
-                    eraseChannelServer(chan);
-                    delete chan;
-                }
-            }
             //send(kicked->getFd(), cmd.c_str(), cmd.size(), 0);
             return ;
         }
@@ -356,13 +349,14 @@ void Server::handleTopic(Client* client, const std::string &line)
     // |TOPIC #channelPARAM|
 
     std::istringstream iss(line.substr(TOPIC_DELIM));
-    if (iss.rdbuf()->in_avail() == 0) 
+    std::string channelPARAM; iss >> channelPARAM;
+    if (channelPARAM.empty()) 
     {
         // check if raw command is TOPIC without params with "/topic" in irssi
         std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " TOPIC :Not enough parameters\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
-    std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); }// removing '#' in front of channel if he s here
+    if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); }// removing '#' in front of channel if he s here
     Channel *tempChan = findChannel(channelPARAM);
     if (tempChan == NULL)   
     {
@@ -378,7 +372,6 @@ void Server::handleTopic(Client* client, const std::string &line)
     }
     if (iss.rdbuf()->in_avail() == 0)
     {
-        std::cout << "SALAM\n";
         // view topics
         std::string RPL;
         if (tempChan->getTopic().empty())
@@ -473,7 +466,7 @@ void Server::handleMode(Client *client, const std::string &line)
                 if (!tempChan->getPassKey().empty())
                 {
                     // check if passkey already set
-                    std::string errorRPL = std::string(ERR_KEYSET) + client->getNick() + " #" + channelPARAM + " :Channel key already set\r\n";
+                    std::string errorRPL = std::string(ERR_KEYSET) + "#" + channelPARAM + " :Channel key already set\r\n";
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
                 if (flagPARAM[0] == '+')
@@ -632,19 +625,12 @@ void Server::handleQuit(Client* client, const std::string &line)
     // Envoyer le message QUIT à tous les channels où le client était présent
     for (std::vector<Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); it++)
     {
-        (*it)->sendToUsersCommand(cmd);
         (*it)->eraseUser(client);
         (*it)->eraseOperator(client);
+        (*it)->sendToUsersCommand(cmd);
         if ((*it)->getOperators().empty())
-        {
             if (!(*it)->getUsers().empty())
                 (*it)->addOperator((*it)->getUsers()[0]);
-            else
-            {
-                eraseChannelServer(*it);
-                delete *it;
-            }
-        }
     }
     //size_t i = 0;
     //while (i < _fds.size())
@@ -716,15 +702,8 @@ void Server::handlePart(Client *client, const std::string &line)
         chan->eraseUser(client); 
         chan->eraseOperator(client);
         if (chan->getOperators().empty())
-        {
             if (!chan->getUsers().empty())
                 chan->addOperator(chan->getUsers()[0]);
-            else
-            {
-                eraseChannelServer(chan);
-                delete chan;
-            }
-        }
         return;
     }
     //else
@@ -735,13 +714,6 @@ void Server::handlePart(Client *client, const std::string &line)
     chan->eraseUser(client);
     chan->eraseOperator(client);
     if (chan->getOperators().empty())
-    {
         if (!chan->getUsers().empty())
             chan->addOperator(chan->getUsers()[0]);
-        else
-        {
-            eraseChannelServer(chan);
-            delete chan;
-        }
-    }
 }
