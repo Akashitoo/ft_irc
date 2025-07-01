@@ -510,6 +510,14 @@ void Server::handleInvite(Client *client, const std::string &line)
         std::string errorReply = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " " + channel + " :No such channel\r\n";
         send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
     }
+    if (!chan->isOperator(client))
+    {
+        std::string errorReply = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
+
+        std::cout << errorReply << '\n';
+        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        return ;
+    }
     //gere si le client qui invite existe
     if(!chan->isOnChannel(client))
     {
