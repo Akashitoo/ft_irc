@@ -137,6 +137,12 @@ void Server::handleJoin(Client *client, const std::string &line)
 
     for (size_t i=0; i < chan_list.size(); i++)
     {
+        if (chan_list[i][0] != '#')
+        {
+            std::string errorRPL = std::string(ERR_BADMASK) + "* :You have not registered\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+        }
+
         std::string channel = &chan_list[i][1];
 
         Channel* chan = this->findChannel(channel);
@@ -209,10 +215,20 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 		std::string channel = line.substr(dest + 2, line.find(" ", dest + 1) - (dest + 2));
 		Channel* chan = this->findChannel(channel);
 		if (!chan)
-            return;
+        {
+            std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " #" + channel + " :No such channel\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+        }
         if (!chan->isOnChannel(client))
         {
             std::string errorReply = std::string(ERR_CANNOTSENDTOCHAN) + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
+            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            return;
+        }
+        std::size_t msg_pos = line.find(" :", dest);
+        if(msg_pos == std::string::npos)
+        {
+            std::string errorReply = std::string(ERR_NOTEXTTOSEND) + client->getNick() + " :No text to send\r\n";
             send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
             return;
         }
@@ -223,6 +239,11 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 	{
 		std::string target = line.substr(dest + 1, line.find(" ", dest + 1) - (dest + 1));
 		std::string msg = line.substr(line.find(" ", dest + 1) + 2);
+        if (msg.empty())
+        {
+            std::string error_msg = std::string(ERR_NOTEXTTOSEND) + client->getNick() + " :No text to send\r\n";
+            send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
+        }
 		size_t len = this->_clients.size();
 		for (size_t i = 0; i < len; i++)
 			if (this->_clients[i]->getNick() == target)
