@@ -23,6 +23,7 @@ void Server::eraseUserServer(Client* user)
 	if (it != this->_clients.end())
         this->_clients.erase(it);
 }
+
 Server::Server(std::string password, int port): _password(password), _port(port){}
 
 Server::~Server(){}
@@ -99,6 +100,7 @@ void Server::handleCommand(Client *client, const std::string &line)
 		{ "MODE", &Server::handleMode },
 		{ "INVITE", &Server::handleInvite },
 		{ "PART", &Server::handlePart },
+		{ "QUIT", &Server::handleQuit },
 		{ "", NULL }
 	};
 	short i = -1; 
@@ -130,8 +132,21 @@ void Server::handleClientInput(Client *client, const std::string &input, size_t 
 
 	while (std::getline(iss, line))
 	{
+		if (!line.empty() && line[line.length() - 1] != '\r')
+		{
+			client->addBuffer(line);
+			return;
+		}
 		if (!line.empty() && line[line.length() - 1] == '\r')
-			line = line.substr(0, line.length() - 1);
+		{
+			if (!client->getBuffer().empty())
+			{
+				line = client->getBuffer() + line.substr(0, line.length() - 1);
+				client->setBufferEmpty();
+			}
+			else
+				line = line.substr(0, line.length() - 1);
+		}
 		handleCommand(client, line);
 	}
 }

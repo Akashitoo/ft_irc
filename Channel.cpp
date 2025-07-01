@@ -20,6 +20,11 @@ void Channel::addOperator(Client* user)
 	this->_operators.push_back(user);
 }
 
+void	Channel::addInvited(Client* user)
+{
+	this->_invited.push_back(user);
+}
+
 void Channel::eraseUser(Client* user)
 {
 	std::vector<Client*>::iterator it = std::find(this->_users.begin(), this->_users.end(), user);

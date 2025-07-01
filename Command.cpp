@@ -43,7 +43,7 @@ void Server::handlePass(Client *client, const std::string &line)
 		client->setVerif(true);
 	else
 	{
-		std::string errorRPL = ERR_PASSWDMISMATCH + client->getNick() + " :Password incorrect";
+		std::string errorRPL = ERR_PASSWDMISMATCH + client->getNick() + " :Password incorrect\r\n";
 		send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
 		// close(client.getFd());
 		client->setVerif(false);
@@ -140,8 +140,11 @@ void Server::handleJoin(Client *client, const std::string &line)
 
     for (size_t i=0; i < chan_list.size(); i++)
     {
+        if (chan_list[i][0] != '#')
+            return;
+        
         std::string channel = &chan_list[i][1];
-
+        
         Channel* chan = this->findChannel(channel);
         if (!chan)
         {
@@ -173,7 +176,6 @@ void Server::handleJoin(Client *client, const std::string &line)
             {
                 if (!chan->isInvited(client))
                 {
-                    std::cout << "sdfsdfsdfds\n";
                     std::string errorReply = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
                     send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
                     return;
@@ -536,7 +538,7 @@ void Server::handleInvite(Client *client, const std::string &line)
 
     std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
     send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
-    chan->addUser(targetClient);
+    chan->addInvited(targetClient);
 }
 
 
@@ -551,12 +553,10 @@ void Server::handleQuit(Client* client, const std::string &line)
     // Envoyer le message QUIT à tous les channels où le client était présent
     for (std::vector<Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); it++)
     {
-        (*it)->eraseUser(client);
         (*it)->sendToUsersCommand(cmd);
+        (*it)->eraseUser(client);
     }
-    eraseUserServer(client);
     close(client->getFd());
-
 }
 
 void Server::handlePart(Client *client, const std::string &line)

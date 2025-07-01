@@ -30,6 +30,7 @@ class Channel
 
 		void 							addUser(Client* user);
 		void 							addOperator(Client* user);
+		void							addInvited(Client* user);
 		void 							eraseUser(Client* user);
 		void 							eraseOperator(Client* user);
 

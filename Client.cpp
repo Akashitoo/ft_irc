@@ -80,3 +80,18 @@ std::vector<Channel *> Client::getJoinedChannels()
 {
     return(this->_joinedChannels);
 }
+
+void Client::addBuffer(std::string cmdslice)
+{
+    this->_buffer += cmdslice;
+}
+
+std::string Client::getBuffer() const
+{
+    return (this->_buffer);
+}
+
+void Client::setBufferEmpty()
+{
+    this->_buffer = "";
+}
