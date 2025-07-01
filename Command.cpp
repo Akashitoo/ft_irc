@@ -18,7 +18,7 @@ void Server::handlePass(Client *client, const std::string &line)
     if (iss.rdbuf()->in_avail() == 0) 
     {
         // check if raw command is TOPIC without params with "/topic" in irssi
-        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " PASS :Not enough parameters\r\n";
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " PASS :Not enough parameters\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
 	std::string pass;
@@ -31,9 +31,9 @@ void Server::handlePass(Client *client, const std::string &line)
     //     return;
 	// }
 
-    if (client->getVerif() && !client->getNick().empty() && !client->getUser().empty())
+    if (client->getConnected())
     {
-		std::string errorRPL = ERR_ALREADYREGISTRED + client->getNick() + " :You may not reregister\r\n"; 
+		std::string errorRPL = std::string(ERR_ALREADYREGISTRED) + client->getNick() + " :You may not reregister\r\n"; 
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
 
@@ -43,7 +43,7 @@ void Server::handlePass(Client *client, const std::string &line)
 		client->setVerif(true);
 	else
 	{
-		std::string errorRPL = ERR_PASSWDMISMATCH + client->getNick() + " :Password incorrect\r\n";
+		std::string errorRPL = std::string(ERR_PASSWDMISMATCH) + client->getNick() + " :Password incorrect\r\n";
 		send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
 		// close(client.getFd());
 		client->setVerif(false);
@@ -55,10 +55,8 @@ void Server::handleNick(Client *client, const std::string &line)
     // ERROR RPLS 431 432 433 462
 	if (!client->getVerif())
 	{
-        // dont know if need this one
-		std::string error_msg = ":localhost 430 : NO VALID\r\n";
-        send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
-        return;
+        std::string errorRPL = std::string(ERR_NOTREGISTERED) + "* :You have not registered\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
 	}
     std::istringstream iss(line.substr(NICK_DELIM));
     if (iss.rdbuf()->in_avail() == 0) 
@@ -101,19 +99,18 @@ void Server::handleUser(Client *client, const std::string &line)
 {
     if (!client->getVerif())
 	{
-		std::string error_msg = ":localhost 430 : NO VALID\r\n";
-        send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
-        return;
+		std::string errorRPL = std::string(ERR_NOTREGISTERED) + "* :You have not registered\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
 	}
     std::istringstream iss(line.substr(USER_DELIM));
-    std::string username, hostname, servername, realname;
-    iss >> username;
-    if (username.empty())
+    if (iss.rdbuf()->in_avail() == 0)
     {
-        std::string error_msg = ":localhost 461 " + client->getNick() + " USER :Not enough parameters\r\n";
+        std::string error_msg = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " USER :Not enough parameters\r\n";
         send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
         return;
     }
+    std::string username, hostname, servername, realname;
+    iss >> username;
     iss >> hostname >> servername;
     std::string temp;
     if (iss >> temp && temp[0] == ':')
@@ -141,8 +138,11 @@ void Server::handleJoin(Client *client, const std::string &line)
     for (size_t i=0; i < chan_list.size(); i++)
     {
         if (chan_list[i][0] != '#')
-            return;
-        
+        {
+            std::string errorRPL = std::string(ERR_BADMASK) + "* :You have not registered\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+        }
+
         std::string channel = &chan_list[i][1];
         
         Channel* chan = this->findChannel(channel);
@@ -159,16 +159,16 @@ void Server::handleJoin(Client *client, const std::string &line)
             {
                 if (i >= pass_list.size())
                 {
-                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    std::string errorRPL = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
                 std::string password = pass_list[i];
                 if (password != chan->getPassKey())
                 {
                     std::cout << password << " : " << chan->getPassKey() << "\n"; 
-                    std::string errorReply = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    std::string errorRPL = std::string(ERR_BADCHANNELKEY) + client->getNick() + " #" + channel + " :Bad channel key\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
             }
@@ -176,8 +176,9 @@ void Server::handleJoin(Client *client, const std::string &line)
             {
                 if (!chan->isInvited(client))
                 {
-                    std::string errorReply = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    // std::cout << "sdfsdfsdfds\n";
+                    std::string errorRPL = std::string(ERR_INVITEONLYCHAN) + client->getNick() + " #" + channel + " :You're not invited\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
             }
@@ -185,16 +186,16 @@ void Server::handleJoin(Client *client, const std::string &line)
             {
                 if (chan->getUserLimit() == (int)chan->getUsers().size())
                 {
-                    std::string errorReply = std::string(ERR_CHANNELISFULL) + client->getNick() + " #" + channel + " :Channel is full\r\n";
-                    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+                    std::string errorRPL = std::string(ERR_CHANNELISFULL) + client->getNick() + " #" + channel + " :Channel is full\r\n";
+                    send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
                     return;
                 }
             }
         }
         if (chan->isOnChannel(client))
         {
-            std::string errorReply = std::string(ERR_USERONCHANNEL) + client->getNick() + " #" + channel + " :User is already on channel\r\n";
-            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            std::string errorRPL = std::string(ERR_USERONCHANNEL) + client->getNick() + " #" + channel + " :User is already on channel\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
             return;
         }
         client->joinChannel(chan);
@@ -214,11 +215,21 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 		std::string channel = line.substr(dest + 2, line.find(" ", dest + 1) - (dest + 2));
 		Channel* chan = this->findChannel(channel);
 		if (!chan)
-            return;
+        {
+            std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " #" + channel + " :No such channel\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+        }
         if (!chan->isOnChannel(client))
         {
-            std::string errorReply = ERR_CANNOTSENDTOCHAN + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
-            send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+            std::string errorRPL = std::string(ERR_CANNOTSENDTOCHAN) + client->getNick() + " #" + channel + " :Cannot send to channel\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
+            return;
+        }
+        std::size_t msg_pos = line.find(" :", dest);
+        if(msg_pos == std::string::npos)
+        {
+            std::string errorRPL = std::string(ERR_NOTEXTTOSEND) + client->getNick() + " :No text to send\r\n";
+            send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
             return;
         }
 		std::string msg = line.substr(line.find(" ", dest + 1) + 2);
@@ -228,6 +239,11 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 	{
 		std::string target = line.substr(dest + 1, line.find(" ", dest + 1) - (dest + 1));
 		std::string msg = line.substr(line.find(" ", dest + 1) + 2);
+        if (msg.empty())
+        {
+            std::string error_msg = std::string(ERR_NOTEXTTOSEND) + client->getNick() + " :No text to send\r\n";
+            send(client->getFd(), error_msg.c_str(), error_msg.size(), 0);
+        }
 		size_t len = this->_clients.size();
 		for (size_t i = 0; i < len; i++)
 			if (this->_clients[i]->getNick() == target)
@@ -236,8 +252,8 @@ void Server::handlePrivateMessage(Client *client, const std::string &line)
 				send(_clients[i]->getFd(), cmd.c_str(), cmd.size(), 0);
 				return ;
 			}
-        std::string errorReply = std::string(ERR_NOSUCHNICK) + target + " :No such nick\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOSUCHNICK) + target + " :No such nick/channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
 	}
 }
 
@@ -261,24 +277,38 @@ void Server::handleKick(Client *client, const std::string &line)
     std::string channel, nick, reason;
     Channel *chan;
 
-    iss >> channel >> nick;
-
+    iss >> channel;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " KICK :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    iss >> nick;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " KICK :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
     reason = line.substr(line.find(" :") + 2);
     channel = channel.substr(1);
     chan = findChannel(channel);
     
     if (chan == NULL) 
     {
-        std::string errorReply = std::string(ERR_NOSUCHCHANNEL) + "#" + channel + " :No such channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
-        return;
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " #" + channel + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    if (!chan->isOnChannel(client))
+    {
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " #" + channel + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     if (!chan->isOperator(client))
     {
-        std::string errorReply = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
+        std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + client->getNick() + " #" + channel + " :You're not channel operator\r\n";
 
-        std::cout << errorReply << '\n';
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::cout << errorRPL << '\n';
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return ;
     }
     for (size_t i = 0; i < chan->getUsers().size(); i++)
@@ -291,12 +321,20 @@ void Server::handleKick(Client *client, const std::string &line)
             std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost KICK #" + channel + " " + chan->getUsers()[i]->getNick() + " :"+ reason + "\r\n";
             chan->sendToUsersCommand(cmd);
             chan->eraseUser(kicked);
-            send(kicked->getFd(), cmd.c_str(), cmd.size(), 0);
+            //send(kicked->getFd(), cmd.c_str(), cmd.size(), 0);
             return ;
         }
     }
-    std::string errorReply = std::string(ERR_NOSUCHNICK) + "#"+ channel + " :No such nick\r\n";
-    send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+    if (!findClient(nick))
+    {
+        std::string errorRPL = std::string(ERR_NOSUCHNICK) + client->getNick() + " #"+ channel + " :No such nick\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    if (!chan->isOnChannel(findClient(nick)))
+    {
+        std::string errorRPL = std::string(ERR_USERNOTINCHANNEL) + client->getNick() + " " + nick + " #"+ channel + " :They aren't on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
 }
 
 
@@ -310,7 +348,7 @@ void Server::handleTopic(Client* client, const std::string &line)
     if (iss.rdbuf()->in_avail() == 0) 
     {
         // check if raw command is TOPIC without params with "/topic" in irssi
-        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " TOPIC :Not enough parameters\r\n";
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " TOPIC :Not enough parameters\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); }// removing '#' in front of channel if he s here
@@ -318,13 +356,13 @@ void Server::handleTopic(Client* client, const std::string &line)
     if (tempChan == NULL)   
     {
         // check no such chann
-        std::string errorRPL = ERR_NOSUCHCHANNEL + client->getNick() + " #" + channelPARAM + " :No such channel\r\n";
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " #" + channelPARAM + " :No such channel\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     else if (!tempChan->isOnChannel(client))
     {
         // check not on chann
-        std::string errorRPL = ERR_NOTONCHANNEL + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     if (iss.rdbuf()->in_avail() == 0)
@@ -333,9 +371,9 @@ void Server::handleTopic(Client* client, const std::string &line)
         // view topics
         std::string RPL;
         if (tempChan->getTopic().empty())
-            RPL = RPL_NOTOPIC + client->getNick() + " #" + channelPARAM + " :No topic is set\r\n";
+            RPL = std::string(RPL_NOTOPIC) + client->getNick() + " #" + channelPARAM + " :No topic is set\r\n";
         else
-            RPL = RPL_TOPIC + client->getNick() + " #" + channelPARAM + " :" + tempChan->getTopic() + "\r\n";
+            RPL = std::string(RPL_TOPIC) + client->getNick() + " #" + channelPARAM + " :" + tempChan->getTopic() + "\r\n";
         send(client->getFd(), RPL.c_str(), RPL.size(), 0);
     }
     else
@@ -365,37 +403,37 @@ void Server::handleMode(Client *client, const std::string &line)
     std::istringstream iss(line.substr(MODE_DELIM));
     if (iss.rdbuf()->in_avail() == 0) 
     {
-        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " MODE :Not enough parameters\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); } else return;// removing '#' in front of channel if he s here
     Channel *tempChan = findChannel(channelPARAM);
     if (iss.rdbuf()->in_avail() == 0) 
     {
-        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " MODE :Not enough parameters\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     if (tempChan == NULL)   
     {
         // check no such chann
-        std::string errorRPL = ERR_NOSUCHCHANNEL + client->getNick() + " #" + channelPARAM + " :No such channel\r\n";
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " #" + channelPARAM + " :No such channel\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     else if (!tempChan->isOnChannel(client))
     {
         // check not on chann
-        std::string errorRPL = ERR_NOTONCHANNEL + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " #" + channelPARAM + " :You're not on that channel\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     if (iss.rdbuf()->in_avail() == 0)
     {
-        std::string RPL = RPL_CHANNELMODEIS + client->getNick() + " #" + channelPARAM + " " + tempChan->getModes() + "\r\n";
+        std::string RPL = std::string(RPL_CHANNELMODEIS) + client->getNick() + " #" + channelPARAM + " " + tempChan->getModes() + "\r\n";
         send(client->getFd(), RPL.c_str(), RPL.size(), 0); return;
     }
     if (!tempChan->isOperator(client))
     {
         // check if operator
-        std::string errorRPL = ERR_CHANOPRIVSNEEDED + client->getNick() + " #" + channelPARAM + " :You're not channel operator\r\n";
+        std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + client->getNick() + " #" + channelPARAM + " :You're not channel operator\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     std::string flagPARAM; iss >> flagPARAM;
@@ -422,14 +460,14 @@ void Server::handleMode(Client *client, const std::string &line)
                 if (iss.rdbuf()->in_avail() == 0)
                 {
                     // check if no params left
-                    std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
+                    std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " MODE :Not enough parameters\r\n";
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
                 std::string newPassKey; iss >> newPassKey;
                 if (!tempChan->getPassKey().empty())
                 {
                     // check if passkey already set
-                    std::string errorRPL = ERR_KEYSET + client->getNick() + " #" + channelPARAM + " :Channel key already set\r\n";
+                    std::string errorRPL = std::string(ERR_KEYSET) + client->getNick() + " #" + channelPARAM + " :Channel key already set\r\n";
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
                 if (flagPARAM[0] == '+')
@@ -444,20 +482,20 @@ void Server::handleMode(Client *client, const std::string &line)
                 if (iss.rdbuf()->in_avail() == 0)
                 {
                     // check if no params left
-                    std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
+                    std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " MODE :Not enough parameters\r\n";
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
                 std::string nickToUpd; iss >> nickToUpd;
                 Client *tempCli = findClient(nickToUpd);
                 if (tempCli == NULL)
                 {
-                    std::string errorRPL = ERR_NOSUCHNICK + client->getNick() + " " + nickToUpd + " :No such nick/channel\r\n";
+                    std::string errorRPL = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + nickToUpd + " :No such nick/channel\r\n";
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
                 if (!tempChan->isOnChannel(tempCli)) // a la place du null mettre un get du user dans la liste de clients du server
                 {
                     // check si le nick en parametre est dans le channel
-                    std::string errorRPL = ERR_USERNOTINCHANNEL + client->getNick() + " " + nickToUpd + " #" + channelPARAM + " :User not in channel\r\n";
+                    std::string errorRPL = std::string(ERR_USERNOTINCHANNEL) + client->getNick() + " " + nickToUpd + " #" + channelPARAM + " :User not in channel\r\n";
                     send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                 }
                 tempChan->addOperator(tempCli);
@@ -466,15 +504,15 @@ void Server::handleMode(Client *client, const std::string &line)
             }
             case L: 
             {
-                int newUserLimit; iss >> newUserLimit; 
                 if (flagPARAM[0] == '+')
                 {
                     if (iss.rdbuf()->in_avail() == 0)
                     {
                         // check if no params left
-                        std::string errorRPL = ERR_NEEDMOREPARAMS + client->getNick() + " MODE :Not enough parameters\r\n";
+                        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " MODE :Not enough parameters\r\n";
                         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
                     }
+                    int newUserLimit; iss >> newUserLimit; 
                     tempChan->setUserLimit(newUserLimit);
                 }
                 else
@@ -482,9 +520,20 @@ void Server::handleMode(Client *client, const std::string &line)
                 tempChan->setModes(flagPARAM[0] == '+', flagPARAM[i]);
                 break;
             }
+            default:
+            {
+                std::string errorRPL = std::string(ERR_UNKNOWNMODE) + client->getNick() + " " + flagPARAM[i] + " :is unknown mode char to me\r\n";
+                send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
+                break;
+            }
+
         }
     }
-    std::string RPL = ":" + client->getNick() + "!" + client->getUser() + "@localhost MODE #" + channelPARAM + " :" + flagPARAM + "\r\n";
+    std::string finalFlags; finalFlags += flagPARAM[0];
+    for (size_t i = 0; i < flagPARAM.size(); i++)
+        if (std::string("itkol").find(flagPARAM[i]) != std::string::npos)
+            finalFlags += flagPARAM[i];
+    std::string RPL = ":" + client->getNick() + "!" + client->getUser() + "@localhost MODE #" + channelPARAM + " :" + finalFlags + "\r\n";
     send(client->getFd(), RPL.c_str(), RPL.size(), 0);
 }
 
@@ -493,7 +542,18 @@ void Server::handleInvite(Client *client, const std::string &line)
     std::istringstream iss(line.substr(7));
     std::string target;
     std::string channel;
-    iss >> target >> channel;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " INVITE :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    iss >> target;
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " INVITE :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    iss >> channel;
 
     if(channel[0] == '#')
         channel = channel.substr(1);
@@ -501,14 +561,22 @@ void Server::handleInvite(Client *client, const std::string &line)
     Channel *chan = findChannel(channel);
     if (!chan)
     {
-        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel + " :No such channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " " + channel + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
+    if (!chan->isOperator(client))
+    {
+        std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channel + " :You're not channel operator\r\n";
+
+        std::cout << errorRPL << '\n';
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
+        return ;
     }
     //gere si le client qui invite existe
     if(!chan->isOnChannel(client))
     {
-        std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel + " :You're not on that channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " " + channel + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
      std::vector<Client*> targets_client;
     for (size_t i = 0; i < _clients.size(); i++)
@@ -519,8 +587,8 @@ void Server::handleInvite(Client *client, const std::string &line)
     //client existe pas
     if (targets_client.empty())
     {
-        std::string errorReply = ERR_NOSUCHNICK + client->getNick() + " " + target + " :No such nick\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + target + " :No such nick\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
@@ -528,15 +596,15 @@ void Server::handleInvite(Client *client, const std::string &line)
     Client* targetClient = targets_client[0];
     if (chan->isOnChannel(targetClient))
     {
-        std::string errorReply = ERR_USERONCHANNEL + client->getNick() + " " + target + " " + channel + " :is already on channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_USERONCHANNEL) + client->getNick() + " " + target + " " + channel + " :is already on channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
     std::string inviteMsg = ":" + client->getNick() + "!" + client->getUser() + "@localhost INVITE " + target + " :#" + channel + "\r\n";
     send(targetClient->getFd(), inviteMsg.c_str(), inviteMsg.size(), 0);
 
-    std::string confirmMsg = RPL_INVITING + client->getNick() + " " + target + " " + channel + "\r\n";
+    std::string confirmMsg = std::string(RPL_INVITING) + client->getNick() + " " + target + " " + channel + "\r\n";
     send(client->getFd(), confirmMsg.c_str(), confirmMsg.size(), 0);
     chan->addInvited(targetClient);
 }
@@ -561,6 +629,12 @@ void Server::handleQuit(Client* client, const std::string &line)
 
 void Server::handlePart(Client *client, const std::string &line)
 {
+    std::istringstream iss(line.substr(PART_DELIM));
+    if (iss.rdbuf()->in_avail() == 0) 
+    {
+        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " PART :Not enough parameters\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
+    }
     size_t pos = line.find('#');
     if(pos == std::string::npos)
         return ;
@@ -569,8 +643,8 @@ void Server::handlePart(Client *client, const std::string &line)
     
     if(!chan)
     {
-        std::string errorReply = ERR_NOSUCHCHANNEL + client->getNick() + " " + channel_part + " :No such channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOSUCHCHANNEL) + client->getNick() + " " + channel_part + " :No such channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
@@ -584,8 +658,8 @@ void Server::handlePart(Client *client, const std::string &line)
     }
     if(!found)
     {
-        std::string errorReply = ERR_NOTONCHANNEL + client->getNick() + " " + channel_part + " :You're not on that channel\r\n";
-        send(client->getFd(), errorReply.c_str(), errorReply.size(), 0);
+        std::string errorRPL = std::string(ERR_NOTONCHANNEL) + client->getNick() + " " + channel_part + " :You're not on that channel\r\n";
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
         return;
     }
 
