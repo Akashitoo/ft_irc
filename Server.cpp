@@ -31,7 +31,7 @@ void Server::checkRegistration(Client *client)
 {
 	if (client->getConnected())
 	{
-		std::string errorRPL = ERR_ALREADYREGISTRED + client->getNick() + " :You're not channel operator\r\n";
+		std::string errorRPL = ERR_ALREADYREGISTRED + client->getNick() + " :You may not reregister\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
 	}
     if (client->getVerif() && !client->getNick().empty() && !client->getUser().empty())
@@ -104,7 +104,14 @@ void Server::handleCommand(Client *client, const std::string &line)
 	short i = -1; 
 	while (cmds[++i].RAW != "") 
 		if (cmds[i].RAW == command) 
+		{
+			if (command != "PASS" && command != "NICK" && command != "USER" && !client->getConnected()) 
+			{
+				std::string errorReply = std::string(ERR_NOTREGISTERED) + "* :You have not registered\r\n";
+        		send(client->getFd(), errorReply.c_str(), errorReply.size(), 0); return;
+			}
 			return ((this->*cmds[i].handle)(client, line), (void)0);
+		}
 }
 
 void Server::add_client()
