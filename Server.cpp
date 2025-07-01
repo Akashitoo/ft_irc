@@ -159,6 +159,13 @@ void Server::eraseUserServer(Client* user)
         this->_clients.erase(it);
 }
 
+void Server::eraseChannelServer(Channel* channel)
+{
+	std::vector<Channel*>::iterator it = std::find(this->_channels.begin(), this->_channels.end(), channel);
+	if (it != this->_channels.end())
+        this->_channels.erase(it);
+}
+
 void Server::read_client()
 {
 	for (size_t i = 0; i < this->_fds.size(); i++)

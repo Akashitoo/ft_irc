@@ -60,6 +60,7 @@ class Server
 		void add_client();
 		void read_client();
 		void eraseUserServer(Client* user);
+		void eraseChannelServer(Channel* channel);
 
 
 };

@@ -292,6 +292,7 @@ void Server::handleKick(Client *client, const std::string &line)
     reason = line.substr(line.find(" :") + 2);
     channel = channel.substr(1);
     chan = findChannel(channel);
+
     
     if (chan == NULL) 
     {
@@ -305,11 +306,9 @@ void Server::handleKick(Client *client, const std::string &line)
     }
     if (!chan->isOperator(client))
     {
+        //std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + client->getNick() + " #" + channel + " :You're not channel operator\r\n";
         std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + client->getNick() + " #" + channel + " :You're not channel operator\r\n";
-
-        std::cout << errorRPL << '\n';
-        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0);
-        return ;
+        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     for (size_t i = 0; i < chan->getUsers().size(); i++)
     {
@@ -321,13 +320,25 @@ void Server::handleKick(Client *client, const std::string &line)
             std::string cmd = ":" + client->getNick() + "!" + client->getUser() + "@localhost KICK #" + channel + " " + chan->getUsers()[i]->getNick() + " :"+ reason + "\r\n";
             chan->sendToUsersCommand(cmd);
             chan->eraseUser(kicked);
+            chan->eraseOperator(client);
+            if (chan->getOperators().empty())
+            {
+                if (!chan->getUsers().empty())
+                    chan->addOperator(chan->getUsers()[0]);
+                else
+                {
+                    eraseChannelServer(chan);
+                    delete chan;
+                }
+            }
             //send(kicked->getFd(), cmd.c_str(), cmd.size(), 0);
             return ;
         }
     }
     if (!findClient(nick))
     {
-        std::string errorRPL = std::string(ERR_NOSUCHNICK) + client->getNick() + " #"+ channel + " :No such nick\r\n";
+        // sur kick quelqu'un qui existe pas le rpl est pas reconnu par irssi
+        std::string errorRPL = std::string(ERR_NOSUCHNICK) + client->getNick() + " " + nick + " :No such nick\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     if (!chan->isOnChannel(findClient(nick)))
@@ -388,7 +399,7 @@ void Server::handleTopic(Client* client, const std::string &line)
         std::string newTopicPARAM = line.substr(line.find(":") + 1);
         tempChan->setTopic(newTopicPARAM);
         std::string RPL = ":" + client->getNick() + "!" + client->getUser() + "@localhost TOPIC #" + channelPARAM + " :" + newTopicPARAM + "\r\n";
-        send(client->getFd(), RPL.c_str(), RPL.size(), 0);
+        tempChan->sendToUsersCommand(RPL);
     }
 }
 
@@ -408,11 +419,6 @@ void Server::handleMode(Client *client, const std::string &line)
     }
     std::string channelPARAM; iss >> channelPARAM; if (channelPARAM.at(0) == '#') { channelPARAM.erase(0, 1); } else return;// removing '#' in front of channel if he s here
     Channel *tempChan = findChannel(channelPARAM);
-    if (iss.rdbuf()->in_avail() == 0) 
-    {
-        std::string errorRPL = std::string(ERR_NEEDMOREPARAMS) + client->getNick() + " MODE :Not enough parameters\r\n";
-        send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
-    }
     if (tempChan == NULL)   
     {
         // check no such chann
@@ -433,7 +439,7 @@ void Server::handleMode(Client *client, const std::string &line)
     if (!tempChan->isOperator(client))
     {
         // check if operator
-        std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + client->getNick() + " #" + channelPARAM + " :You're not channel operator\r\n";
+        std::string errorRPL = std::string(ERR_CHANOPRIVSNEEDED) + "#" + channelPARAM + " :You're not channel operator\r\n";
         send(client->getFd(), errorRPL.c_str(), errorRPL.size(), 0); return;
     }
     std::string flagPARAM; iss >> flagPARAM;
@@ -628,15 +634,37 @@ void Server::handleQuit(Client* client, const std::string &line)
     {
         (*it)->sendToUsersCommand(cmd);
         (*it)->eraseUser(client);
-    }
-    send(client->getFd(), cmd.c_str(), cmd.size(), 0);
-    for (size_t i=0; i < this->_fds.size(); i++)
-        if (this->_fds[i].fd == client->getFd())
+        (*it)->eraseOperator(client);
+        if ((*it)->getOperators().empty())
         {
-		    close(this->_fds[i].fd);
-            break;
+            if (!(*it)->getUsers().empty())
+                (*it)->addOperator((*it)->getUsers()[0]);
+            else
+            {
+                eraseChannelServer(*it);
+                delete *it;
+            }
         }
-    close(client->getFd());
+    }
+    //size_t i = 0;
+    //while (i < _fds.size())
+    //    if (this->_fds[i].fd == client->getFd())
+    //    {
+	//	    close(this->_fds[i].fd);
+    //        break;
+    //    }
+    //std::vector<struct pollfd>::iterator it = std::find(this->_fds.begin(), this->_fds.end(), _fds[i]);
+	//if (it != this->_fds.end())
+    //    this->_fds.erase(it);
+
+    for (std::vector<struct pollfd>::iterator it = this->_fds.begin(); it != this->_fds.end(); ++it) {
+        if (it->fd == client->getFd()) {
+            close(client->getFd());
+            this->_fds.erase(it);
+            break ;
+        }
+    }
+
     eraseUserServer(client);
     delete client;
 }
@@ -685,7 +713,19 @@ void Server::handlePart(Client *client, const std::string &line)
     {
         std::string msg = ":" + client->getNick() + "!" + client->getUser() + "@localhost PART #" + channel_part + "\r\n";
         chan->sendToUsersCommand(msg);
-        chan->eraseUser(client); return;
+        chan->eraseUser(client); 
+        chan->eraseOperator(client);
+        if (chan->getOperators().empty())
+        {
+            if (!chan->getUsers().empty())
+                chan->addOperator(chan->getUsers()[0]);
+            else
+            {
+                eraseChannelServer(chan);
+                delete chan;
+            }
+        }
+        return;
     }
     //else
     //    re = "SALAM3LIKOM";
@@ -693,4 +733,15 @@ void Server::handlePart(Client *client, const std::string &line)
     std::string msg = ":" + client->getNick() + "!" + client->getUser() + "@localhost PART #" + channel_part + " :" + re + "\r\n";
     chan->sendToUsersCommand(msg);
     chan->eraseUser(client);
+    chan->eraseOperator(client);
+    if (chan->getOperators().empty())
+    {
+        if (!chan->getUsers().empty())
+            chan->addOperator(chan->getUsers()[0]);
+        else
+        {
+            eraseChannelServer(chan);
+            delete chan;
+        }
+    }
 }

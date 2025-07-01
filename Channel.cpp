@@ -125,6 +125,11 @@ std::string Channel::getModes()
 	return _modes;
 }
 
+std::vector<Client*>	Channel::getOperators()
+{
+	return _operators;
+}
+
 void Channel::setPassKey(const std::string &passKey)
 {
 	_passKey = passKey;
